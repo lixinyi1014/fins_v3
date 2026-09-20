@@ -1,0 +1,16 @@
+﻿V3.3 / RoboMaster C / ST-Link — ESKF_VOFA_20260916_R2
+
+1. 解压整个压缩包，不要在压缩包内直接双击工程。
+2. 接线看 Lower_Level_Controller/docs/PORT_MAP_V33.md。
+3. 烧录看 Lower_Level_Controller/docs/BOARD_BRINGUP.md。
+4. 用 Keil 打开 Lower_Level_Controller/MDK-ARM/RM_Frame_C.uvprojx。
+   工程输出目录已有同版 AXF/HEX；核对 ST-Link/SWD 后可 Flash -> Download。
+   改源码后必须先 Rebuild。需要自己编译时用 Arm Compiler 6.24 和 STM32F4xx_DFP。
+5. Firmware/FinsROV_ESKF.hex 是另附固定预构建镜像；BIN起址0x08000000。
+6. 首轮断开推进器动力；四压力口在空气中静止上电；VOFA用115200、8E1、FireWater。
+   先看CAL=OK、STOP=1、SEQ持续变化和倾斜方向，不发ON/TES。
+
+完整状态与未解决项见 docs/FINAL_INTEGRATION_20260916.md。
+该包包含全部生产源码、依赖、Keil工程和固件；未上板验证。
+仅省略8份厂商CHM帮助书，不含回归测试/下载资料/中间编译对象。
+压缩包内 MANIFEST_SHA256.json 记录每个交付文件的校验值。
