@@ -157,6 +157,9 @@ int main(void)
     const char banner[] = "BOOT=V33 " LC_FIRMWARE_ID " UART6_115200_8E1\r\n";
     LcSerial_Write(reinterpret_cast<const uint8_t *>(banner), sizeof(banner)-1);
 
+    // 当前 LC_IWDG_ENABLED=0，与原工程一致不启用看门狗。
+    // 因此不能因上一次固件留下的 RCC IWDGRST 标志而进入永久恢复锁。
+#if LC_IWDG_ENABLED
     if (watchdog_recovery)
     {
         // IWDG 复位后仍在计时。先尝试中位，再停留于恢复锁定，避免传感器长初始化造成复位循环。
@@ -177,6 +180,9 @@ int main(void)
             HAL_Delay(20);
         }
     }
+#else
+    (void)watchdog_recovery; // 仅保留复位原因读取接口；禁用 IWDG 时不阻断正常启动。
+#endif
 
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
@@ -225,7 +231,8 @@ int main(void)
     // TODO(操作)：四个压力口置于空气中静止上电；不能在水下重启来重新定义水面。
     const char begin[] = "CAL=START KEEP_PRESSURE_PORTS_IN_AIR\r\n";
     LcSerial_Write(reinterpret_cast<const uint8_t *>(begin), sizeof(begin)-1);
-    const char *calibration_message = PressureSensor::pressure_sensor.CalibrateAtStartup()
+    const bool calibration_ok = PressureSensor::pressure_sensor.CalibrateAtStartup();
+    const char *calibration_message = calibration_ok
         ? "CAL=OK\r\n" : "CAL=FAIL RESTART_AT_SURFACE\r\n";
     LcSerial_Write(reinterpret_cast<const uint8_t *>(calibration_message), strlen(calibration_message));
     const auto &cal = PressureSensor::pressure_sensor.startup_calibration;
@@ -235,6 +242,14 @@ int main(void)
         static_cast<unsigned long>(cal.state), static_cast<unsigned long>(cal.failed_channel),
         static_cast<unsigned long>(cal.samples));
     LcSerial_Write(reinterpret_cast<const uint8_t *>(calibration_detail), detail_length);
+    if (calibration_ok)
+    {
+        // 只有所有设备初始化及水面标定都成功，才提示“启动完成”。
+        buzzer.Init();
+        buzzer.StartupBeep();
+        const char beep_message[] = "BOOT=BEEP_OK\r\n";
+        LcSerial_Write(reinterpret_cast<const uint8_t *>(beep_message), sizeof(beep_message)-1);
+    }
     const char controller_message[] = "CTRL=ESKF STOPPED VOFA_FIREWATER_16CH\r\n";
     LcSerial_Write(reinterpret_cast<const uint8_t *>(controller_message), sizeof(controller_message)-1);
 		

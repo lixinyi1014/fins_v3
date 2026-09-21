@@ -73,7 +73,7 @@ PressurePwmRequest BuildNeutralOutputRequest()
     request.operation = PressurePwmOperation::Output;
     request.epoch = ReadStopEpoch(); // 附带停止代次；写出前与最新代次比较
     for (int i = 0; i < LC_THRUSTER_COUNT; ++i)
-        request.thrusters.pulse_us[i] = LC_THRUSTER_NEUTRAL_US; // 8 路，1610 us
+        request.thrusters.pulse_us[i] = LC_THRUSTER_NEUTRAL_US; // 8 路，1550 us
     request.servos = servos->BuildOutput(); // 4 路舵机 us 快照；停止只强制推进器中位，舵机保留原请求
     return request;
 }

@@ -21,8 +21,7 @@ static float LegacyDepthFromCm(float cm)
 std::array<int8_t, 8> Sign = LC_THRUSTER_SIGNS_INIT; // {1,-1,1,1,-1,-1,1,-1}；Mark propeller direction: Clockwise = 1, Counter-Clockwise = -1.; the index corresponds to the propeller ID. // 推进器正反桨，正1反-1，序号为推进器序号
 std::array<uint8_t, 4> InID = LC_VERTICAL_CHANNELS_INIT;                // {1,2,6,5}；V33-1,2 Channel indices on the expansion board for the four internal thrusters: front-left, rear-left, front-right, rear-right. //内部的4个推进器接到扩展板上的序号，左前-左后-右前-右后
 std::array<uint8_t, 4> OutID = LC_HORIZONTAL_CHANNELS_INIT;               // {0,3,7,4}；V33-1,2 Channel indices on the expansion board for the four external thrusters: front-left, rear-left, front-right, rear-right. //外部的4个推进器接到扩展板上的序号，左前-左后-右前-右后
-int32_t InitPWM = LC_THRUSTER_NEUTRAL_US; // 1610 us；Initial PWM value for thruster initialization. // 推进器初始化的PWM（V33-0,1）
-//int32_t InitPWM = 1540; // Initial PWM value for thruster initialization. //推进器初始化的PWM（V33-2）
+int32_t InitPWM = LC_THRUSTER_NEUTRAL_US; // 1550 us；Initial PWM value for thruster initialization. // 推进器初始化的PWM
 std::array<int32_t, 8> Compensation = {LC_THRUSTER_DEADZONE_US, LC_THRUSTER_DEADZONE_US, LC_THRUSTER_DEADZONE_US, LC_THRUSTER_DEADZONE_US, LC_THRUSTER_DEADZONE_US, LC_THRUSTER_DEADZONE_US, LC_THRUSTER_DEADZONE_US, LC_THRUSTER_DEADZONE_US}; // 各路 50 us；Dead-zone compensation value. // 死区补偿值
 // Vertical thrusters.
 // 垂直推进器
@@ -360,7 +359,7 @@ void Propeller_I2C::StopControl()
     flag_angle = false;
     motion_state = STOP;
     Target_depth = 30;
-    for (int i = 0; i < LC_THRUSTER_COUNT; ++i) output_command_.pulse_us[i] = LC_THRUSTER_NEUTRAL_US; // 8 路，1610 us
+    for (int i = 0; i < LC_THRUSTER_COUNT; ++i) output_command_.pulse_us[i] = LC_THRUSTER_NEUTRAL_US; // 8 路，1550 us
 }
 
 void Propeller_I2C::Handle()
@@ -408,7 +407,7 @@ void Propeller_I2C::WriteOutput(const lower_controller::ThrusterPwmCommand& comm
     // Caller owns/selects I2C2 channel 4; preserve per-channel clamp/rounding and writes.
     // 调用方负责选通道；按原顺序逐通道限幅、换算和写入，不修改原始请求脉宽。
     for (int i = 0; i < PROPELLER_NUM; ++i) {
-        const int32_t duty_count = lower_controller::LegacyThrusterPwmCount(command.pulse_us[i]); // us 转 PCA 计数，1610 us 对应 330
+        const int32_t duty_count = lower_controller::LegacyThrusterPwmCount(command.pulse_us[i]); // us 转 PCA 计数，1550 us 对应约 317
         PCA_Setpwm(i, 0, duty_count); // i=PCA 0..7；duty_count 为计数值
     }
 }

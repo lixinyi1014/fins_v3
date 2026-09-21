@@ -77,8 +77,8 @@ class Propeller_I2C: public Device
 {
 private:
     //uint8_t RxBuffer[SERIAL_LENGTH_MAX];
-    // Existing requested pulse widths; neutral comes from Parameter.InitPWM (V33: 1610 us).
-    // 原始请求脉宽；中位值由版本参数给出，当前 V33 为 1610 us。
+    // Existing requested pulse widths; neutral comes from Parameter.InitPWM (V33: 1550 us).
+    // 原始请求脉宽；中位值由版本参数给出，当前 V33 为 1550 us。
     lower_controller::ThrusterPwmCommand output_command_ = {};
     //int32_t data_receive[5];
     float Target_depth;

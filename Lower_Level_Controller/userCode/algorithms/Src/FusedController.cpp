@@ -126,7 +126,7 @@ FusedControlResult FusedController::Compute(const FusionState &state, const Fuse
 {
     FusedControlResult result = {};
     for (unsigned i = 0; i < 8; ++i)
-        result.command.pulse_us[i] = LC_THRUSTER_NEUTRAL_US; // 1610 us。
+        result.command.pulse_us[i] = LC_THRUSTER_NEUTRAL_US; // 1550 us。
     if (!FusedControlConfigurationReady(configuration_) ||
         !FusedStateUsable(state, now, request.yaw_enabled) || !isfinite(request.depth_m) ||
         request.depth_m < 0 || request.depth_m > 100 || !Finite(request.euler_rad, 3) ||
@@ -196,7 +196,7 @@ FusedControlResult FusedController::Compute(const FusionState &state, const Fuse
                 failed.command.pulse_us[channel] = LC_THRUSTER_NEUTRAL_US;
             return failed;
         }
-        // V3.3 记录死区 1570..1670 us，中位 1610：正向 +60、反向 -40。
+        // V3.3 当前死区 1510..1610 us，中位 1550：正向 +60、反向 -40。
         // 极小非零量仍受 PCA 的约 4.88 us 分辨率影响，实际启动阈值待入水核对。
         if (pulse > LC_THRUSTER_NEUTRAL_US)
             pulse += LC_THRUSTER_DEADZONE_HIGH_US - LC_THRUSTER_NEUTRAL_US;

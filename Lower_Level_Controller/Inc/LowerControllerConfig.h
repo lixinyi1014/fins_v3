@@ -21,23 +21,26 @@
 #define LC_IMU_DMA_TIMEOUT_MS        4U
 #define LC_IMU_RESULT_TIMEOUT_MS     8U
 #define LC_I2C_TIMEOUT_MS            2U
-#define LC_BUS_BUDGET_US             5000U
+#define LC_BUS_BUDGET_US             20000U // 四路 TCA + MS5837 访问共用的整组事务预算；5 ms 会稳定丢掉后续通道。
 #define LC_CALIBRATION_BUDGET_US     8000000U
 #define LC_STATE_MAX_AGE_US          20000U
 #define LC_UART_TX_TIMEOUT_MS        30U
 #define LC_UART_RX_QUEUE_LENGTH      8U
 #define LC_UART_TX_QUEUE_LENGTH      16U
 #define LC_UART_TX_PACKET_SIZE       192U // 一整行 VOFA 数据原子入队，避免分段日志交错。
-#define LC_VOFA_PERIOD_US            100000U // 默认 10 Hz；只影响显示，不改变控制频率。
+#define LC_VOFA_PERIOD_US            20000U // 默认 50 Hz；只影响显示，不改变 150 Hz 控制频率。
 
 // 上位机每 100 ms 发 HB；500 ms 未收到新心跳则停止，恢复心跳不会自动启动。
 #define LC_COMMAND_TIMEOUT_US       500000U
 #define LC_TASK_STALL_TIMEOUT_US    100000U
-#define LC_BUS_REPLY_TIMEOUT_MS     10U
+#define LC_BUS_REPLY_TIMEOUT_MS     40U // 覆盖四路压力一次完整状态步，避免总线任务尚未回复就被控制任务判为故障。
 #define LC_STARTUP_PRESSURE_SAMPLES 100U
 #define LC_STARTUP_PRESSURE_SETTLE_MS 1000U
 #define LC_STARTUP_PRESSURE_SPREAD_PA 200.0f // TODO：实测静止噪声后调整；约 2 cm 水头。
-#define LC_IWDG_ENABLED             1
+// 与原始工程保持一致：原工程的 MX_IWDG_Init() 和 watchdog 设备均未加入运行路径。
+// 当前先关闭 IWDG，避免旧复位标志或一次总线超时把调试板锁在恢复循环中。
+// 重新做水下安全测试前，再单独评估并启用看门狗及独立动力急停。
+#define LC_IWDG_ENABLED             0
 // TODO(HARDWARE)：Making_Instructions 接线图未连接 OE，也未指定急停 GPIO。
 // 原装配接线只能用 I2C 写中位；总线失效时须切断推进器电源。
 // OE 需另接上拉和可用 GPIO，并验证电调丢失 PWM 后停止；原资料不能替代此实测。
@@ -81,7 +84,7 @@
 #define LC_FIRMWARE_ID              "ESKF_VOFA_20260916_R2"
 
 /* Existing output calibration; PWM pulse widths are in microseconds.
- * 输出沿用已有标定；脉宽单位为微秒，1610 是当前版本的初始化/停止值。 */
+ * 输出沿用当前实物标定；脉宽单位为微秒，1550 是当前版本的初始化/停止值。 */
 // 按用户选择沿用原版推进器/电调及其供电方案；额定电压不属于固件配置参数。
 // 资料确认：TCA0..3 接四个 MS5837-30BA；TCA4 接 PCA；PCA0..7 推进器、8..11 舵机。
 #define LC_ROBOT_VERSION             V33
@@ -92,14 +95,14 @@
 #define LC_PWM_FREQUENCY_HZ          50
 #define LC_PWM_PERIOD_US             20000
 #define LC_PWM_COUNTS                4096
-#define LC_THRUSTER_NEUTRAL_US        1610
+#define LC_THRUSTER_NEUTRAL_US        1550
 #define LC_THRUSTER_MIN_US            1000
 #define LC_THRUSTER_MAX_US            2000
 #define LC_THRUSTER_DEADZONE_US       50
-// V3.3设计.pdf p9 的原机实测死区；1610 中位保留，ESKF 按上下边界分别补偿。
+// V3.3 实物标定：1550 us 为中位；按原死区相对中位的 -40/+60 us 保留为 1510..1610。
 // LC_THRUSTER_DEADZONE_US 仅保留给旧参考实现；当前闭环使用以下两项。
-#define LC_THRUSTER_DEADZONE_LOW_US   1570
-#define LC_THRUSTER_DEADZONE_HIGH_US  1670
+#define LC_THRUSTER_DEADZONE_LOW_US   1510
+#define LC_THRUSTER_DEADZONE_HIGH_US  1610
 // TODO(THRUSTER_DEADZONE)：原机记录并非逐台电调标定，入水低推力测试仍需核对。
 #define LC_SERVO_MIN_US               500
 #define LC_SERVO_MAX_US               2500
@@ -109,7 +112,7 @@
 // 原 Propeller.cpp 的通道映射已与 V3.3设计.pdf p7 一致：推进器 1..8 对应 PCA0..7。
 // zh-CN/外形.STEP 已定位八个推进器；垂直轴间距为前后 108、左右 214.01532 mm。
 // 水平轴与纵向 45 度，接口坐标及舵机轴位置见 docs/CAD_GEOMETRY_20260916.md。
-// STEP 确认几何位置；通道、正反桨与 1610 us 中位继续按原版采用。
+// STEP 确认几何位置；通道、正反桨与 1550 us 中位按当前实物标定采用。
 // PCA0..7: 前左水平、前左垂直、后左垂直、后左水平、后右水平、后右垂直、前右垂直、前右水平。
 // PCA8..11: 左上(横轴)、左下(竖轴)、右上(横轴)、右下(竖轴)；V3.3设计p7编号1..4。
 // 口号指外接PCA9685的0起始通道，不是C板自身的PWM接口。接线表见docs/PORT_MAP_V33.md。

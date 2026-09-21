@@ -48,6 +48,12 @@ bool Allowed(I2C_HandleTypeDef *bus)
 }
 uint32_t Timeout(I2C_HandleTypeDef *bus, uint32_t requested)
 {
+    if (!LcRuntime_IsRunning())
+    {
+        // 启动阶段只有 main 一个执行者，沿用旧裸机初始化的单事务节拍；
+        // 但把原来可能为 0xffff 的无限接近等待收紧为 10 ms，避免无设备时卡死。
+        return requested > 10U ? 10U : requested;
+    }
     return requested > LC_I2C_TIMEOUT_MS
                ? LC_I2C_TIMEOUT_MS
                : requested; // 运行期传给 HAL 的超时参数最多 2 ms；不是整笔事务的硬时间上界
@@ -84,6 +90,10 @@ extern "C" uint32_t LcBus_ErrorCount(I2C_HandleTypeDef *bus)
 extern "C" HAL_StatusTypeDef LcBus_Transmit(I2C_HandleTypeDef *bus, uint16_t addr, uint8_t *data,
                                             uint16_t length, uint32_t timeout)
 {
+    // 启动阶段没有任务竞争总线，不做运行期 BUSY/owner 门禁；这与旧代码的
+    // HAL_I2C_Master_Transmit 初始化路径一致。进入调度器后仍必须经过 Allowed。
+    if (!LcRuntime_IsRunning())
+        return Record(bus, HAL_I2C_Master_Transmit(bus, addr, data, length, Timeout(bus, timeout)));
     if (!Allowed(bus))
         return HAL_TIMEOUT;
     return Record(bus, HAL_I2C_Master_Transmit(bus, addr, data, length, Timeout(bus, timeout)));
@@ -92,6 +102,8 @@ extern "C" HAL_StatusTypeDef LcBus_Receive(I2C_HandleTypeDef *bus, uint16_t addr
                                            uint16_t length, uint32_t timeout)
 {
     memset(data, 0, length);
+    if (!LcRuntime_IsRunning())
+        return Record(bus, HAL_I2C_Master_Receive(bus, addr, data, length, Timeout(bus, timeout)));
     if (!Allowed(bus))
         return HAL_TIMEOUT;
     return Record(bus, HAL_I2C_Master_Receive(bus, addr, data, length, Timeout(bus, timeout)));
@@ -101,6 +113,8 @@ extern "C" HAL_StatusTypeDef LcBus_MemRead(I2C_HandleTypeDef *bus, uint16_t addr
                                            uint32_t timeout)
 {
     memset(data, 0, length);
+    if (!LcRuntime_IsRunning())
+        return Record(bus, HAL_I2C_Mem_Read(bus, addr, reg, reg_size, data, length, Timeout(bus, timeout)));
     if (!Allowed(bus))
         return HAL_TIMEOUT;
     return Record(bus, HAL_I2C_Mem_Read(bus, addr, reg, reg_size, data, length, Timeout(bus, timeout)));
@@ -109,6 +123,8 @@ extern "C" HAL_StatusTypeDef LcBus_MemWrite(I2C_HandleTypeDef *bus, uint16_t add
                                             uint16_t reg_size, uint8_t *data, uint16_t length,
                                             uint32_t timeout)
 {
+    if (!LcRuntime_IsRunning())
+        return Record(bus, HAL_I2C_Mem_Write(bus, addr, reg, reg_size, data, length, Timeout(bus, timeout)));
     if (!Allowed(bus))
         return HAL_TIMEOUT;
     return Record(bus, HAL_I2C_Mem_Write(bus, addr, reg, reg_size, data, length, Timeout(bus, timeout)));
