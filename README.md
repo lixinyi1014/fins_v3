@@ -1,15 +1,29 @@
+﻿V3.3 / RoboMaster C / ST-Link — ESKF_VOFA_20260916_R2
+
+1. 接线看 Lower_Level_Controller/docs/PORT_MAP_V33.md。
+2. 烧录看 Lower_Level_Controller/docs/BOARD_BRINGUP.md。
+3. 用 Keil 打开 Lower_Level_Controller/MDK-ARM/RM_Frame_C.uvprojx。
+   工程输出目录已有同版 AXF/HEX；核对 ST-Link/SWD 后可 Flash -> Download。
+   改源码后必须先 Rebuild。需要自己编译时用 Arm Compiler 6.24 和 STM32F4xx_DFP。
+4. Firmware/FinsROV_ESKF.hex 是另附固定预构建镜像；BIN起址0x08000000。
+5. 首轮断开推进器动力；四压力口在空气中静止上电；VOFA用115200、8E1、FireWater。
+   先看CAL=OK、STOP=1、SEQ持续变化和倾斜方向，不发ON/TES。
+
+完整状态与未解决项见 docs/FINAL_INTEGRATION_20260916.md。
+压缩包内 MANIFEST_SHA256.json 记录每个交付文件的校验值。
+
 # 当前运行框架
 
 应用入口为 `userCode/devices/Src/Usermain.cpp`。推进器先写中位，再初始化其他设备。
 正常上电在空气中静止采100组压力，四路全部合格才提交本次Pa参考和旧偏置，不写Flash。
 随后启动四个静态任务，默认且唯一的控制器为 ESKF + SI PID。
 
-| 任务 | 内容 | 优先级 / 栈 |
-|---|---|---|
-| ImuFusionTask | SPI DMA数据解码、温控、时间排序、ESKF姿态和深度；不运行旧Mahony | 5 / 8192B |
-| ControlLoopTask | 命令、反馈检查、新PID与混控、输出请求、诊断 | 4 / 6144B |
-| PressurePwmTask | 独占I2C2；四路压力采集、PCA推进器/舵机输出 | 3 / 6144B |
-| UartTransmitTask | 有限队列、异步UART发送及超时 | 2 / 2048B |
+| 任务             | 内容                                                         | 优先级 / 栈 |
+| ---------------- | ------------------------------------------------------------ | ----------- |
+| ImuFusionTask    | SPI DMA数据解码、温控、时间排序、ESKF姿态和深度；不运行旧Mahony | 5 / 8192B   |
+| ControlLoopTask  | 命令、反馈检查、新PID与混控、输出请求、诊断                  | 4 / 6144B   |
+| PressurePwmTask  | 独占I2C2；四路压力采集、PCA推进器/舵机输出                   | 3 / 6144B   |
+| UartTransmitTask | 有限队列、异步UART发送及超时                                 | 2 / 2048B   |
 
 TIM1以150 Hz通知控制；PC5/PC4触发gyro/accel SPI DMA，PG3触发磁场读取。
 TIM2为1us时间戳，TIM7为HAL毫秒时基，SysTick为FreeRTOS1ms节拍。
@@ -36,7 +50,6 @@ OE接线未确认、代码未启用；I2C不能工作时无法保证停止PWM已
 VOFA使用FireWater，默认10Hz、16通道，停止和未就绪时也输出。UART队列16包、每包容量192字节；整行入队避免交错。
 压力原始值由I2C2任务经回复副本交给显示层。显示格式化耗时也计入控制截止时间。
 启动打印BOOT阶段与CAL结果；文本不使用冒号，防止污染曲线。详见BOARD_BRINGUP.md。
-
 
 STAT命令可读停止、反馈就绪、压力校准、状态位、有效通道、故障和最后停止原因。
 last_stop_reason：1心跳超时、2控制卡住、3总线回复超时、4断言、5输出写失败、6反馈无效、7周期超时、8控制计算无效、9OFF、10重新校准请求、11温控；0无记录。已锁存的严重故障原因不被OFF覆盖。

@@ -507,54 +507,54 @@
             </CommonProperty>
             <GroupArmAds>
               <Cads>
-            <interw>1</interw>
-            <Optim>3</Optim>
-            <oTime>0</oTime>
-            <SplitLS>0</SplitLS>
-            <OneElfS>1</OneElfS>
-            <Strict>0</Strict>
-            <EnumInt>0</EnumInt>
-            <PlainCh>0</PlainCh>
-            <Ropi>0</Ropi>
-            <Rwpi>0</Rwpi>
-            <wLevel>3</wLevel>
-            <uThumb>0</uThumb>
-            <uSurpInc>0</uSurpInc>
-            <uC99>1</uC99>
-            <uGnu>0</uGnu>
-            <useXO>0</useXO>
-            <v6Lang>3</v6Lang>
-            <v6LangP>3</v6LangP>
-            <vShortEn>1</vShortEn>
-            <vShortWch>1</vShortWch>
-            <v6Lto>0</v6Lto>
-            <v6WtE>0</v6WtE>
-            <v6Rtti>0</v6Rtti>
-            <VariousControls>
-              <MiscControls>-O2 -fno-fast-math -fno-finite-math-only</MiscControls>
-              <Define>USE_HAL_DRIVER,STM32F407xx</Define>
-              <Undefine></Undefine>
-              <IncludePath>../../Inc;../../Drivers/STM32F4xx_HAL_Driver/Inc;../../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../../Middlewares/ST/STM32_USB_Device_Library/Core/Inc;../../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc;../../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../../Drivers/CMSIS/Include;../../userCode/tasks/Inc;../../Middlewares/Third_Party/FreeRTOS/include;../../Middlewares/Third_Party/FreeRTOS/portable/GCC/ARM_CM4F;..\..\userCode\devices\Inc;..\..\userCode\algorithms\Inc;..\..\userCode\bsp\Inc;..\..\userCode\drivers\Inc;..\..\userCode\MiddleWares\Inc</IncludePath>
-            </VariousControls>
-          </Cads>
+                <interw>1</interw>
+                <Optim>3</Optim>
+                <oTime>0</oTime>
+                <SplitLS>0</SplitLS>
+                <OneElfS>1</OneElfS>
+                <Strict>0</Strict>
+                <EnumInt>0</EnumInt>
+                <PlainCh>0</PlainCh>
+                <Ropi>0</Ropi>
+                <Rwpi>0</Rwpi>
+                <wLevel>3</wLevel>
+                <uThumb>0</uThumb>
+                <uSurpInc>0</uSurpInc>
+                <uC99>1</uC99>
+                <uGnu>0</uGnu>
+                <useXO>0</useXO>
+                <v6Lang>3</v6Lang>
+                <v6LangP>3</v6LangP>
+                <vShortEn>1</vShortEn>
+                <vShortWch>1</vShortWch>
+                <v6Lto>0</v6Lto>
+                <v6WtE>0</v6WtE>
+                <v6Rtti>0</v6Rtti>
+                <VariousControls>
+                  <MiscControls>-O2 -fno-fast-math -fno-finite-math-only</MiscControls>
+                  <Define>USE_HAL_DRIVER,STM32F407xx</Define>
+                  <Undefine></Undefine>
+                  <IncludePath>../../Inc;../../Drivers/STM32F4xx_HAL_Driver/Inc;../../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../../Middlewares/ST/STM32_USB_Device_Library/Core/Inc;../../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc;../../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../../Drivers/CMSIS/Include;../../userCode/tasks/Inc;../../Middlewares/Third_Party/FreeRTOS/include;../../Middlewares/Third_Party/FreeRTOS/portable/GCC/ARM_CM4F;..\..\userCode\devices\Inc;..\..\userCode\algorithms\Inc;..\..\userCode\bsp\Inc;..\..\userCode\drivers\Inc;..\..\userCode\MiddleWares\Inc</IncludePath>
+                </VariousControls>
+              </Cads>
               <Aads>
-            <interw>1</interw>
-            <Ropi>0</Ropi>
-            <Rwpi>0</Rwpi>
-            <thumb>0</thumb>
-            <SplitLS>0</SplitLS>
-            <SwStkChk>0</SwStkChk>
-            <NoWarn>0</NoWarn>
-            <uSurpInc>0</uSurpInc>
-            <useXO>0</useXO>
-            <ClangAsOpt>4</ClangAsOpt>
-            <VariousControls>
-              <MiscControls></MiscControls>
-              <Define></Define>
-              <Undefine></Undefine>
-              <IncludePath></IncludePath>
-            </VariousControls>
-          </Aads>
+                <interw>1</interw>
+                <Ropi>0</Ropi>
+                <Rwpi>0</Rwpi>
+                <thumb>0</thumb>
+                <SplitLS>0</SplitLS>
+                <SwStkChk>0</SwStkChk>
+                <NoWarn>0</NoWarn>
+                <uSurpInc>0</uSurpInc>
+                <useXO>0</useXO>
+                <ClangAsOpt>4</ClangAsOpt>
+                <VariousControls>
+                  <MiscControls></MiscControls>
+                  <Define></Define>
+                  <Undefine></Undefine>
+                  <IncludePath></IncludePath>
+                </VariousControls>
+              </Aads>
             </GroupArmAds>
           </GroupOption>
           <Files>
@@ -671,36 +671,36 @@
                 </CommonProperty>
                 <FileArmAds>
                   <Cads>
-            <interw>1</interw>
-            <Optim>3</Optim>
-            <oTime>0</oTime>
-            <SplitLS>0</SplitLS>
-            <OneElfS>1</OneElfS>
-            <Strict>0</Strict>
-            <EnumInt>0</EnumInt>
-            <PlainCh>0</PlainCh>
-            <Ropi>0</Ropi>
-            <Rwpi>0</Rwpi>
-            <wLevel>3</wLevel>
-            <uThumb>0</uThumb>
-            <uSurpInc>0</uSurpInc>
-            <uC99>1</uC99>
-            <uGnu>0</uGnu>
-            <useXO>0</useXO>
-            <v6Lang>3</v6Lang>
-            <v6LangP>3</v6LangP>
-            <vShortEn>1</vShortEn>
-            <vShortWch>1</vShortWch>
-            <v6Lto>0</v6Lto>
-            <v6WtE>0</v6WtE>
-            <v6Rtti>0</v6Rtti>
-            <VariousControls>
-              <MiscControls>-O2 -fno-fast-math -fno-finite-math-only</MiscControls>
-              <Define>USE_HAL_DRIVER,STM32F407xx</Define>
-              <Undefine></Undefine>
-              <IncludePath>../../Inc;../../Drivers/STM32F4xx_HAL_Driver/Inc;../../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../../Middlewares/ST/STM32_USB_Device_Library/Core/Inc;../../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc;../../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../../Drivers/CMSIS/Include;../../userCode/tasks/Inc;../../Middlewares/Third_Party/FreeRTOS/include;../../Middlewares/Third_Party/FreeRTOS/portable/GCC/ARM_CM4F;..\..\userCode\devices\Inc;..\..\userCode\algorithms\Inc;..\..\userCode\bsp\Inc;..\..\userCode\drivers\Inc;..\..\userCode\MiddleWares\Inc</IncludePath>
-            </VariousControls>
-          </Cads>
+                    <interw>1</interw>
+                    <Optim>3</Optim>
+                    <oTime>0</oTime>
+                    <SplitLS>0</SplitLS>
+                    <OneElfS>1</OneElfS>
+                    <Strict>0</Strict>
+                    <EnumInt>0</EnumInt>
+                    <PlainCh>0</PlainCh>
+                    <Ropi>0</Ropi>
+                    <Rwpi>0</Rwpi>
+                    <wLevel>3</wLevel>
+                    <uThumb>0</uThumb>
+                    <uSurpInc>0</uSurpInc>
+                    <uC99>1</uC99>
+                    <uGnu>0</uGnu>
+                    <useXO>0</useXO>
+                    <v6Lang>3</v6Lang>
+                    <v6LangP>3</v6LangP>
+                    <vShortEn>1</vShortEn>
+                    <vShortWch>1</vShortWch>
+                    <v6Lto>0</v6Lto>
+                    <v6WtE>0</v6WtE>
+                    <v6Rtti>0</v6Rtti>
+                    <VariousControls>
+                      <MiscControls>-O2 -fno-fast-math -fno-finite-math-only</MiscControls>
+                      <Define>USE_HAL_DRIVER,STM32F407xx</Define>
+                      <Undefine></Undefine>
+                      <IncludePath>../../Inc;../../Drivers/STM32F4xx_HAL_Driver/Inc;../../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../../Middlewares/ST/STM32_USB_Device_Library/Core/Inc;../../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc;../../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../../Drivers/CMSIS/Include;../../userCode/tasks/Inc;../../Middlewares/Third_Party/FreeRTOS/include;../../Middlewares/Third_Party/FreeRTOS/portable/GCC/ARM_CM4F;..\..\userCode\devices\Inc;..\..\userCode\algorithms\Inc;..\..\userCode\bsp\Inc;..\..\userCode\drivers\Inc;..\..\userCode\MiddleWares\Inc</IncludePath>
+                    </VariousControls>
+                  </Cads>
                 </FileArmAds>
               </FileOption>
             </File>
@@ -767,54 +767,54 @@
             </CommonProperty>
             <GroupArmAds>
               <Cads>
-            <interw>1</interw>
-            <Optim>3</Optim>
-            <oTime>0</oTime>
-            <SplitLS>0</SplitLS>
-            <OneElfS>1</OneElfS>
-            <Strict>0</Strict>
-            <EnumInt>0</EnumInt>
-            <PlainCh>0</PlainCh>
-            <Ropi>0</Ropi>
-            <Rwpi>0</Rwpi>
-            <wLevel>3</wLevel>
-            <uThumb>0</uThumb>
-            <uSurpInc>0</uSurpInc>
-            <uC99>1</uC99>
-            <uGnu>0</uGnu>
-            <useXO>0</useXO>
-            <v6Lang>3</v6Lang>
-            <v6LangP>3</v6LangP>
-            <vShortEn>1</vShortEn>
-            <vShortWch>1</vShortWch>
-            <v6Lto>0</v6Lto>
-            <v6WtE>0</v6WtE>
-            <v6Rtti>0</v6Rtti>
-            <VariousControls>
-              <MiscControls>-O2 -fno-fast-math -fno-finite-math-only</MiscControls>
-              <Define>USE_HAL_DRIVER,STM32F407xx</Define>
-              <Undefine></Undefine>
-              <IncludePath>../../Inc;../../Drivers/STM32F4xx_HAL_Driver/Inc;../../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../../Middlewares/ST/STM32_USB_Device_Library/Core/Inc;../../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc;../../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../../Drivers/CMSIS/Include;../../userCode/tasks/Inc;../../Middlewares/Third_Party/FreeRTOS/include;../../Middlewares/Third_Party/FreeRTOS/portable/GCC/ARM_CM4F;..\..\userCode\devices\Inc;..\..\userCode\algorithms\Inc;..\..\userCode\bsp\Inc;..\..\userCode\drivers\Inc;..\..\userCode\MiddleWares\Inc</IncludePath>
-            </VariousControls>
-          </Cads>
+                <interw>1</interw>
+                <Optim>3</Optim>
+                <oTime>0</oTime>
+                <SplitLS>0</SplitLS>
+                <OneElfS>1</OneElfS>
+                <Strict>0</Strict>
+                <EnumInt>0</EnumInt>
+                <PlainCh>0</PlainCh>
+                <Ropi>0</Ropi>
+                <Rwpi>0</Rwpi>
+                <wLevel>3</wLevel>
+                <uThumb>0</uThumb>
+                <uSurpInc>0</uSurpInc>
+                <uC99>1</uC99>
+                <uGnu>0</uGnu>
+                <useXO>0</useXO>
+                <v6Lang>3</v6Lang>
+                <v6LangP>3</v6LangP>
+                <vShortEn>1</vShortEn>
+                <vShortWch>1</vShortWch>
+                <v6Lto>0</v6Lto>
+                <v6WtE>0</v6WtE>
+                <v6Rtti>0</v6Rtti>
+                <VariousControls>
+                  <MiscControls>-O2 -fno-fast-math -fno-finite-math-only</MiscControls>
+                  <Define>USE_HAL_DRIVER,STM32F407xx</Define>
+                  <Undefine></Undefine>
+                  <IncludePath>../../Inc;../../Drivers/STM32F4xx_HAL_Driver/Inc;../../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../../Middlewares/ST/STM32_USB_Device_Library/Core/Inc;../../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc;../../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../../Drivers/CMSIS/Include;../../userCode/tasks/Inc;../../Middlewares/Third_Party/FreeRTOS/include;../../Middlewares/Third_Party/FreeRTOS/portable/GCC/ARM_CM4F;..\..\userCode\devices\Inc;..\..\userCode\algorithms\Inc;..\..\userCode\bsp\Inc;..\..\userCode\drivers\Inc;..\..\userCode\MiddleWares\Inc</IncludePath>
+                </VariousControls>
+              </Cads>
               <Aads>
-            <interw>1</interw>
-            <Ropi>0</Ropi>
-            <Rwpi>0</Rwpi>
-            <thumb>0</thumb>
-            <SplitLS>0</SplitLS>
-            <SwStkChk>0</SwStkChk>
-            <NoWarn>0</NoWarn>
-            <uSurpInc>0</uSurpInc>
-            <useXO>0</useXO>
-            <ClangAsOpt>4</ClangAsOpt>
-            <VariousControls>
-              <MiscControls></MiscControls>
-              <Define></Define>
-              <Undefine></Undefine>
-              <IncludePath></IncludePath>
-            </VariousControls>
-          </Aads>
+                <interw>1</interw>
+                <Ropi>0</Ropi>
+                <Rwpi>0</Rwpi>
+                <thumb>0</thumb>
+                <SplitLS>0</SplitLS>
+                <SwStkChk>0</SwStkChk>
+                <NoWarn>0</NoWarn>
+                <uSurpInc>0</uSurpInc>
+                <useXO>0</useXO>
+                <ClangAsOpt>4</ClangAsOpt>
+                <VariousControls>
+                  <MiscControls></MiscControls>
+                  <Define></Define>
+                  <Undefine></Undefine>
+                  <IncludePath></IncludePath>
+                </VariousControls>
+              </Aads>
             </GroupArmAds>
           </GroupOption>
           <Files>
@@ -839,9 +839,6 @@
               <FilePath>../../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c</FilePath>
             </File>
           </Files>
-        </Group>
-        <Group>
-          <GroupName>::CMSIS</GroupName>
         </Group>
         <Group>
           <GroupName>FreeRTOS Runtime</GroupName>
@@ -914,106 +911,106 @@
           </Files>
         </Group>
         <Group>
-        <GroupName>Lower Controller Application</GroupName>
-        <Files>
-          <File>
-            <FileName>Kalman_Filter.cpp</FileName>
-            <FileType>8</FileType>
-            <FilePath>..\..\userCode\algorithms\Src\Kalman_Filter.cpp</FilePath>
-          </File>
-          <File>
-            <FileName>MahonyAHRS.cpp</FileName>
-            <FileType>8</FileType>
-            <FilePath>..\..\userCode\algorithms\Src\MahonyAHRS.cpp</FilePath>
-          </File>
-          <File>
-            <FileName>Matrix.cpp</FileName>
-            <FileType>8</FileType>
-            <FilePath>..\..\userCode\algorithms\Src\Matrix.cpp</FilePath>
-          </File>
-          <File>
-            <FileName>PID.cpp</FileName>
-            <FileType>8</FileType>
-            <FilePath>..\..\userCode\algorithms\Src\PID.cpp</FilePath>
-          </File>
-          <File>
-            <FileName>bsp_spi.cpp</FileName>
-            <FileType>8</FileType>
-            <FilePath>..\..\userCode\bsp\Src\bsp_spi.cpp</FilePath>
-          </File>
-          <File>
-            <FileName>Buzzer.cpp</FileName>
-            <FileType>8</FileType>
-            <FilePath>..\..\userCode\devices\Src\Buzzer.cpp</FilePath>
-          </File>
-          <File>
-            <FileName>Extension.cpp</FileName>
-            <FileType>8</FileType>
-            <FilePath>..\..\userCode\devices\Src\Extension.cpp</FilePath>
-          </File>
-          <File>
-            <FileName>IMU.cpp</FileName>
-            <FileType>8</FileType>
-            <FilePath>..\..\userCode\devices\Src\IMU.cpp</FilePath>
-          </File>
-          <File>
-            <FileName>LED.cpp</FileName>
-            <FileType>8</FileType>
-            <FilePath>..\..\userCode\devices\Src\LED.cpp</FilePath>
-          </File>
-          <File>
-            <FileName>Legacy.cpp</FileName>
-            <FileType>8</FileType>
-            <FilePath>..\..\userCode\devices\Src\Legacy.cpp</FilePath>
-          </File>
-          <File>
-            <FileName>Propeller.cpp</FileName>
-            <FileType>8</FileType>
-            <FilePath>..\..\userCode\devices\Src\Propeller.cpp</FilePath>
-          </File>
-          <File>
-            <FileName>Sensor.cpp</FileName>
-            <FileType>8</FileType>
-            <FilePath>..\..\userCode\devices\Src\Sensor.cpp</FilePath>
-          </File>
-          <File>
-            <FileName>Servo.cpp</FileName>
-            <FileType>8</FileType>
-            <FilePath>..\..\userCode\devices\Src\Servo.cpp</FilePath>
-          </File>
-          <File>
-            <FileName>Usermain.cpp</FileName>
-            <FileType>8</FileType>
-            <FilePath>..\..\userCode\devices\Src\Usermain.cpp</FilePath>
-          </File>
-          <File>
-            <FileName>Watchdog.cpp</FileName>
-            <FileType>8</FileType>
-            <FilePath>..\..\userCode\devices\Src\Watchdog.cpp</FilePath>
-          </File>
-          <File>
-            <FileName>BMI088driver.cpp</FileName>
-            <FileType>8</FileType>
-            <FilePath>..\..\userCode\drivers\Src\BMI088driver.cpp</FilePath>
-          </File>
-          <File>
-            <FileName>ist8310driver.cpp</FileName>
-            <FileType>8</FileType>
-            <FilePath>..\..\userCode\drivers\Src\ist8310driver.cpp</FilePath>
-          </File>
-          <File>
-            <FileName>BMI088Middleware.cpp</FileName>
-            <FileType>8</FileType>
-            <FilePath>..\..\userCode\MiddleWares\Src\BMI088Middleware.cpp</FilePath>
-          </File>
-          <File>
-            <FileName>ist8310driver_middleware.cpp</FileName>
-            <FileType>8</FileType>
-            <FilePath>..\..\userCode\MiddleWares\Src\ist8310driver_middleware.cpp</FilePath>
-          </File>
-        </Files>
-      </Group>
-            <Group>
+          <GroupName>Lower Controller Application</GroupName>
+          <Files>
+            <File>
+              <FileName>Kalman_Filter.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\userCode\algorithms\Src\Kalman_Filter.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>MahonyAHRS.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\userCode\algorithms\Src\MahonyAHRS.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Matrix.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\userCode\algorithms\Src\Matrix.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>PID.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\userCode\algorithms\Src\PID.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_spi.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\userCode\bsp\Src\bsp_spi.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Buzzer.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\userCode\devices\Src\Buzzer.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Extension.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\userCode\devices\Src\Extension.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>IMU.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\userCode\devices\Src\IMU.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>LED.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\userCode\devices\Src\LED.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Legacy.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\userCode\devices\Src\Legacy.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Propeller.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\userCode\devices\Src\Propeller.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Sensor.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\userCode\devices\Src\Sensor.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Servo.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\userCode\devices\Src\Servo.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Usermain.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\userCode\devices\Src\Usermain.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Watchdog.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\userCode\devices\Src\Watchdog.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>BMI088driver.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\userCode\drivers\Src\BMI088driver.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>ist8310driver.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\userCode\drivers\Src\ist8310driver.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>BMI088Middleware.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\userCode\MiddleWares\Src\BMI088Middleware.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>ist8310driver_middleware.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\userCode\MiddleWares\Src\ist8310driver_middleware.cpp</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
           <GroupName>Async acquisition and fused control</GroupName>
           <Files>
             <File>
@@ -1068,7 +1065,10 @@
             </File>
           </Files>
         </Group>
-</Groups>
+        <Group>
+          <GroupName>::CMSIS</GroupName>
+        </Group>
+      </Groups>
     </Target>
   </Targets>
 
