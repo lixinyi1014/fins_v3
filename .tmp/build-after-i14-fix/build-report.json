@@ -1,0 +1,938 @@
+{
+  "project_flags": [
+    "-O2",
+    "-fno-fast-math",
+    "-fno-finite-math-only"
+  ],
+  "purpose": "offline verification; release uses actual Keil build",
+  "compiled": 154,
+  "failed": 0,
+  "results": [
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\000_stm32f4xx_hal.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_adc.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\001_stm32f4xx_hal_adc.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_adc_ex.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\002_stm32f4xx_hal_adc_ex.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_can.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\003_stm32f4xx_hal_can.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_cec.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\004_stm32f4xx_hal_cec.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_cortex.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\005_stm32f4xx_hal_cortex.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_crc.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\006_stm32f4xx_hal_crc.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_cryp.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\007_stm32f4xx_hal_cryp.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_cryp_ex.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\008_stm32f4xx_hal_cryp_ex.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_dac.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\009_stm32f4xx_hal_dac.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_dac_ex.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\010_stm32f4xx_hal_dac_ex.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_dcmi.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\011_stm32f4xx_hal_dcmi.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_dcmi_ex.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\012_stm32f4xx_hal_dcmi_ex.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_dfsdm.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\013_stm32f4xx_hal_dfsdm.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_dma.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\014_stm32f4xx_hal_dma.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_dma2d.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\015_stm32f4xx_hal_dma2d.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_dma_ex.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\016_stm32f4xx_hal_dma_ex.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_dsi.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\017_stm32f4xx_hal_dsi.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_eth.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\018_stm32f4xx_hal_eth.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_exti.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\019_stm32f4xx_hal_exti.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_flash.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\020_stm32f4xx_hal_flash.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_flash_ex.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\021_stm32f4xx_hal_flash_ex.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_flash_ramfunc.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\022_stm32f4xx_hal_flash_ramfunc.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_fmpi2c.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\023_stm32f4xx_hal_fmpi2c.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_fmpi2c_ex.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\024_stm32f4xx_hal_fmpi2c_ex.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_fmpsmbus.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\025_stm32f4xx_hal_fmpsmbus.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_fmpsmbus_ex.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\026_stm32f4xx_hal_fmpsmbus_ex.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_gpio.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\027_stm32f4xx_hal_gpio.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_hash.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\028_stm32f4xx_hal_hash.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_hash_ex.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\029_stm32f4xx_hal_hash_ex.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_hcd.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\030_stm32f4xx_hal_hcd.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_i2c.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\031_stm32f4xx_hal_i2c.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_i2c_ex.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\032_stm32f4xx_hal_i2c_ex.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_i2s.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\033_stm32f4xx_hal_i2s.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_i2s_ex.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\034_stm32f4xx_hal_i2s_ex.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_irda.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\035_stm32f4xx_hal_irda.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_iwdg.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\036_stm32f4xx_hal_iwdg.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_lptim.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\037_stm32f4xx_hal_lptim.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_ltdc.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\038_stm32f4xx_hal_ltdc.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_ltdc_ex.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\039_stm32f4xx_hal_ltdc_ex.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_mmc.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\040_stm32f4xx_hal_mmc.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_nand.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\041_stm32f4xx_hal_nand.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_nor.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\042_stm32f4xx_hal_nor.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_pccard.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\043_stm32f4xx_hal_pccard.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_pcd.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\044_stm32f4xx_hal_pcd.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_pcd_ex.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\045_stm32f4xx_hal_pcd_ex.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_pwr.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\046_stm32f4xx_hal_pwr.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_pwr_ex.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\047_stm32f4xx_hal_pwr_ex.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_qspi.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\048_stm32f4xx_hal_qspi.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_rcc.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\049_stm32f4xx_hal_rcc.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_rcc_ex.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\050_stm32f4xx_hal_rcc_ex.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_rng.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\051_stm32f4xx_hal_rng.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_rtc.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\052_stm32f4xx_hal_rtc.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_rtc_ex.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\053_stm32f4xx_hal_rtc_ex.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_sai.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\054_stm32f4xx_hal_sai.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_sai_ex.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\055_stm32f4xx_hal_sai_ex.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_sd.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\056_stm32f4xx_hal_sd.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_sdram.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\057_stm32f4xx_hal_sdram.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_smartcard.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\058_stm32f4xx_hal_smartcard.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_smbus.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\059_stm32f4xx_hal_smbus.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_spdifrx.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\060_stm32f4xx_hal_spdifrx.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_spi.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\061_stm32f4xx_hal_spi.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_sram.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\062_stm32f4xx_hal_sram.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_tim.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\063_stm32f4xx_hal_tim.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_tim_ex.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\064_stm32f4xx_hal_tim_ex.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_uart.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\065_stm32f4xx_hal_uart.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_usart.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\066_stm32f4xx_hal_usart.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_hal_wwdg.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\067_stm32f4xx_hal_wwdg.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_adc.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\068_stm32f4xx_ll_adc.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_crc.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\069_stm32f4xx_ll_crc.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_dac.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\070_stm32f4xx_ll_dac.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_dma.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\071_stm32f4xx_ll_dma.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_dma2d.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\072_stm32f4xx_ll_dma2d.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_exti.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\073_stm32f4xx_ll_exti.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_fmc.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\074_stm32f4xx_ll_fmc.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_fmpi2c.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\075_stm32f4xx_ll_fmpi2c.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_fsmc.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\076_stm32f4xx_ll_fsmc.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_gpio.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\077_stm32f4xx_ll_gpio.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_i2c.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\078_stm32f4xx_ll_i2c.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_lptim.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\079_stm32f4xx_ll_lptim.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_pwr.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\080_stm32f4xx_ll_pwr.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_rcc.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\081_stm32f4xx_ll_rcc.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_rng.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\082_stm32f4xx_ll_rng.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_rtc.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\083_stm32f4xx_ll_rtc.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_sdmmc.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\084_stm32f4xx_ll_sdmmc.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_spi.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\085_stm32f4xx_ll_spi.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_tim.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\086_stm32f4xx_ll_tim.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_usart.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\087_stm32f4xx_ll_usart.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_usb.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\088_stm32f4xx_ll_usb.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Drivers\\STM32F4xx_HAL_Driver\\Src\\stm32f4xx_ll_utils.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\089_stm32f4xx_ll_utils.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "MDK-ARM\\startup_stm32f407xx.s",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\090_startup_stm32f407xx.o",
+      "exit_code": 0,
+      "output": "Warning: A1950W: The legacy armasm assembler is deprecated. Consider using the armclang integrated assembler instead.\r\n0 Errors, 1 Warning\r\n"
+    },
+    {
+      "file": "Middlewares\\ST\\STM32_USB_Device_Library\\Class\\CDC\\Src\\usbd_cdc.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\091_usbd_cdc.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Middlewares\\ST\\STM32_USB_Device_Library\\Core\\Src\\usbd_core.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\092_usbd_core.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Middlewares\\ST\\STM32_USB_Device_Library\\Core\\Src\\usbd_ctlreq.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\093_usbd_ctlreq.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Middlewares\\ST\\STM32_USB_Device_Library\\Core\\Src\\usbd_ioreq.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\094_usbd_ioreq.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Middlewares\\Third_Party\\FreeRTOS\\list.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\095_list.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Middlewares\\Third_Party\\FreeRTOS\\portable\\GCC\\ARM_CM4F\\port.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\096_port.o",
+      "exit_code": 0,
+      "output": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\Lower_Level_Controller\\Middlewares\\Third_Party\\FreeRTOS\\portable\\GCC\\ARM_CM4F\\port.c:291:16: warning: converting the result of '<<' to a boolean always evaluates to true [-Wtautological-constant-compare]\r\n  291 |         configASSERT( configMAX_SYSCALL_INTERRUPT_PRIORITY );\r\n      |                       ^\r\nC:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\Lower_Level_Controller\\Inc\\FreeRTOSConfig.h:40:53: note: expanded from macro 'configMAX_SYSCALL_INTERRUPT_PRIORITY'\r\n   40 | #define configMAX_SYSCALL_INTERRUPT_PRIORITY    (5U << 4U) // 0x50\uff1b\u4f7f\u7528 FromISR \u7684 NVIC \u4f18\u5148\u7ea7\u6570\u503c\u987b \u22655\r\n      |                                                     ^\r\n1 warning generated.\r\n"
+    },
+    {
+      "file": "Middlewares\\Third_Party\\FreeRTOS\\queue.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\097_queue.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Middlewares\\Third_Party\\FreeRTOS\\tasks.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\098_tasks.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Src\\adc.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\099_adc.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Src\\can.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\100_can.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Src\\dma.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\101_dma.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Src\\gpio.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\102_gpio.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Src\\i2c.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\103_i2c.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Src\\iwdg.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\104_iwdg.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Src\\LowerTimebase.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\105_LowerTimebase.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Src\\main.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\106_main.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Src\\spi.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\107_spi.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Src\\stm32f4xx_hal_msp.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\108_stm32f4xx_hal_msp.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Src\\stm32f4xx_it.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\109_stm32f4xx_it.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Src\\system_stm32f4xx.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\110_system_stm32f4xx.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Src\\tim.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\111_tim.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Src\\usart.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\112_usart.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Src\\usb_device.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\113_usb_device.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Src\\usbd_cdc_if.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\114_usbd_cdc_if.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Src\\usbd_conf.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\115_usbd_conf.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "Src\\usbd_desc.c",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\116_usbd_desc.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\algorithms\\Src\\AttitudeEskf.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\117_AttitudeEskf.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\algorithms\\Src\\FusedController.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\118_FusedController.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\algorithms\\Src\\FusionConfiguration.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\119_FusionConfiguration.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\algorithms\\Src\\FusionTimeline.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\120_FusionTimeline.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\algorithms\\Src\\Kalman_Filter.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\121_Kalman_Filter.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\algorithms\\Src\\MahonyAHRS.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\122_MahonyAHRS.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\algorithms\\Src\\Matrix.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\123_Matrix.o",
+      "exit_code": 0,
+      "output": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\Lower_Level_Controller\\userCode\\algorithms\\Src\\Matrix.cpp:4:10: warning: non-portable path to file '\"Matrix.h\"'; specified path differs in case from file name on disk [-Wnonportable-include-path]\r\n    4 | #include \"matrix.h\"\r\n      |          ^~~~~~~~~~\r\n      |          \"Matrix.h\"\r\n1 warning generated.\r\n"
+    },
+    {
+      "file": "userCode\\algorithms\\Src\\PID.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\124_PID.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\algorithms\\Src\\PressureCompensation.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\125_PressureCompensation.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\bsp\\Src\\bsp_spi.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\126_bsp_spi.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\devices\\Src\\Buzzer.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\127_Buzzer.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\devices\\Src\\Extension.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\128_Extension.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\devices\\Src\\FusedControlAdapter.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\129_FusedControlAdapter.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\devices\\Src\\IMU.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\130_IMU.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\devices\\Src\\ImuDmaAcquisition.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\131_ImuDmaAcquisition.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\devices\\Src\\LED.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\132_LED.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\devices\\Src\\Legacy.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\133_Legacy.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\devices\\Src\\PressureArrayAcquisition.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\134_PressureArrayAcquisition.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\devices\\Src\\Propeller.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\135_Propeller.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\devices\\Src\\Sensor.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\136_Sensor.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\devices\\Src\\Servo.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\137_Servo.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\devices\\Src\\Usermain.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\138_Usermain.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\devices\\Src\\Watchdog.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\139_Watchdog.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\drivers\\Src\\BMI088driver.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\140_BMI088driver.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\drivers\\Src\\ist8310driver.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\141_ist8310driver.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\MiddleWares\\Src\\BMI088Middleware.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\142_BMI088Middleware.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\MiddleWares\\Src\\ist8310driver_middleware.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\143_ist8310driver_middleware.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\tasks\\Src\\ControllerTaskStartup.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\144_ControllerTaskStartup.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\tasks\\Src\\ControlLoopTask.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\145_ControlLoopTask.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\tasks\\Src\\I2cBusAccess.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\146_I2cBusAccess.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\tasks\\Src\\ImuAttitudeTask.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\147_ImuAttitudeTask.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\tasks\\Src\\ImuFusionTask.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\148_ImuFusionTask.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\tasks\\Src\\ImuSampleInterrupts.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\149_ImuSampleInterrupts.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\tasks\\Src\\PressurePwmTask.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\150_PressurePwmTask.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\tasks\\Src\\TaskInterruptHandlers.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\151_TaskInterruptHandlers.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\tasks\\Src\\TaskSharedState.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\152_TaskSharedState.o",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "file": "userCode\\tasks\\Src\\UartTransmitTask.cpp",
+      "object": "C:\\Users\\lixin\\Desktop\\workspace\\FinsROV_V33_ESKF_20260916_R2\\.tmp\\build-after-i14-fix\\153_UartTransmitTask.o",
+      "exit_code": 0,
+      "output": ""
+    }
+  ],
+  "link_exit_code": 0,
+  "link_output": ""
+}

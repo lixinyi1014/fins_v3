@@ -217,10 +217,11 @@ bool DispatchReceivedCommands(bool &arm_requested, uint32_t &arm_epoch)
                 (unsigned long)timing_diagnostics.bus_output_max,
                 (unsigned long)controller_task_diagnostics.deadline_misses);
             send();
-            n = snprintf(line, sizeof(line), "EDIAG7=I2C2_ERR=%lu,I2C2_REC=%lu,I2C3_ERR=%lu,I2C3_REC=%lu,P_FRAME_DROP=%lu\r\n",
+            n = snprintf(line, sizeof(line), "EDIAG7=I2C2_ERR=%lu,I2C2_REC=%lu,I2C3_ERR=%lu,I2C3_REC=%lu,P_FRAME_DROP=%lu,E2=0x%08lX,E3=0x%08lX\r\n",
                 (unsigned long)LcBus_ErrorCount(&hi2c2), (unsigned long)LcBus_RecoveryCount(&hi2c2),
                 (unsigned long)LcBus_ErrorCount(&hi2c3), (unsigned long)LcBus_RecoveryCount(&hi2c3),
-                (unsigned long)PressureSensor::pressure_sensor.BusFrameDrops());
+                (unsigned long)PressureSensor::pressure_sensor.BusFrameDrops(),
+                (unsigned long)LcBus_LastError(&hi2c2), (unsigned long)LcBus_LastError(&hi2c3));
             send();
             timing_diagnostics.pressure_submit_max = timing_diagnostics.imu_wait_max = 0;
             timing_diagnostics.output_submit_max = timing_diagnostics.cycle_max = 0;

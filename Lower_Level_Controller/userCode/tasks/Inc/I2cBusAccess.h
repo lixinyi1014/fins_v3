@@ -11,6 +11,7 @@ extern "C"
     int LcBus_Ok(I2C_HandleTypeDef *bus);
     uint32_t LcBus_ErrorCount(I2C_HandleTypeDef *bus);
     uint32_t LcBus_RecoveryCount(I2C_HandleTypeDef *bus); // 出错后执行的总线恢复次数
+    uint32_t LcBus_LastError(I2C_HandleTypeDef *bus);     // 最后一次错误编码，见 I2cBusAccess.cpp BusState
     HAL_StatusTypeDef LcBus_Transmit(I2C_HandleTypeDef *, uint16_t, uint8_t *, uint16_t, uint32_t);
     HAL_StatusTypeDef LcBus_Receive(I2C_HandleTypeDef *, uint16_t, uint8_t *, uint16_t, uint32_t);
     HAL_StatusTypeDef LcBus_MemRead(I2C_HandleTypeDef *, uint16_t, uint16_t, uint16_t, uint8_t *, uint16_t,

@@ -14,12 +14,12 @@ namespace
 {
 /* PCA9685 自己保持各通道寄存器，不需要每个 150 Hz 周期把 12 路原样重写一遍。
  * 原先每周期逐通道写 12 次（约 3~4 ms），加上水压一步（约 3 ms）超过 6.67 ms 控制周期，
- * 频繁触发 StopDeadline，解锁后推进器会被反复打停。这里只写有变化的通道；
- * 每 kPwmRefreshCycles 个周期、或 I2C2 出过错后，全量重写一次，保证芯片内容与影子一致。 */
-constexpr uint32_t kPwmRefreshCycles = 30; // 150 Hz / 30 = 5 Hz 全量刷新
+ * 频繁触发 StopDeadline，解锁后推进器会被反复打停。这里只写有变化的通道，
+ * 另外每周期轮流多刷新 1 路（12 个周期一轮，约 12.5 Hz），不再一次性全量重写造成 4 ms 尖峰。
+ * 只有影子失效（启动或写失败）或 I2C2 出过错时才全量重写。 */
 uint16_t pwm_shadow[12];
 bool pwm_shadow_valid = false;
-uint32_t pwm_cycles_since_refresh = 0, pwm_last_bus_errors = 0;
+uint32_t pwm_refresh_cursor = 0, pwm_last_bus_errors = 0;
 /** 写 mask 中标记的通道；成功后更新影子，失败则作废影子以强制下次全量重写。 */
 bool WritePwmChannels(const uint16_t counts[12], uint16_t mask)
 {
@@ -106,16 +106,15 @@ PressurePwmReply ProcessPressurePwmRequest(const PressurePwmRequest &request,
             counts[channel] = pulse * LC_PWM_COUNTS / LC_PWM_PERIOD_US; // Preserve servo integer conversion.
         }
         const uint32_t bus_errors = LcBus_ErrorCount(&hi2c2);
-        const bool refresh = !pwm_shadow_valid || bus_errors != pwm_last_bus_errors ||
-                             ++pwm_cycles_since_refresh >= kPwmRefreshCycles;
-        uint16_t dirty = 0;
+        const bool full = !pwm_shadow_valid || bus_errors != pwm_last_bus_errors;
+        uint16_t dirty = uint16_t(1U << (pwm_refresh_cursor % 12U)); // 轮流刷新 1 路
         for (unsigned i = 0; i < 12; ++i)
-            if (refresh || counts[i] != pwm_shadow[i]) dirty |= uint16_t(1U << i);
+            if (full || counts[i] != pwm_shadow[i]) dirty |= uint16_t(1U << i);
         if (!WritePwmChannels(counts, dirty)) return reply;
-        if (refresh)
+        ++pwm_refresh_cursor;
+        if (full)
         {
             pwm_shadow_valid = true;
-            pwm_cycles_since_refresh = 0;
             pwm_last_bus_errors = bus_errors;
         }
         if (request.allow_motion && LcTime_NowUs()-request.released_us >= 1000000U/LC_CONTROL_HZ)

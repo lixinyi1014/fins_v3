@@ -11,6 +11,10 @@ struct BusState
 {
     TaskHandle_t owner;
     uint32_t started_us, budget_us, errors, recoveries;
+    // 最后一次错误：bit0..7 HAL ErrorCode(1 BERR,2 ARLO,4 AF/NACK,8 OVR,0x20 TIMEOUT)，
+    // bit8..15 HAL 返回值(1 ERROR,2 BUSY,3 TIMEOUT)，bit16..23 7 位从机地址，
+    // bit24..27 操作(1 发,2 收,3 读寄存器,4 写寄存器,0xB 请求时间预算用尽)。
+    uint32_t last_error;
     bool failed, needs_recovery;
 };
 BusState state2 = {}, state3 = {};
@@ -39,6 +43,7 @@ bool Allowed(I2C_HandleTypeDef *bus)
     { // 单位 us；事务之间检查，不能强行中断已经开始的 HAL 调用
         state.failed = true;
         ++state.errors;
+        state.last_error = 0xBU << 24;
         return false;
     }
     return true;
@@ -96,10 +101,12 @@ void RecoverBus(I2C_HandleTypeDef *bus)
     LcTime_DelayUs(5);
     HAL_I2C_Init(bus);
 }
-HAL_StatusTypeDef Record(I2C_HandleTypeDef *bus, HAL_StatusTypeDef status)
+HAL_StatusTypeDef Record(I2C_HandleTypeDef *bus, HAL_StatusTypeDef status, uint16_t addr, uint32_t op)
 {
     if (status != HAL_OK)
     {
+        State(bus).last_error = (bus->ErrorCode & 0xFFU) | ((uint32_t(status) & 0xFFU) << 8) |
+                                ((uint32_t(addr >> 1) & 0xFFU) << 16) | ((op & 0xFU) << 24);
         State(bus).failed = true;
         State(bus).needs_recovery = true; // 下一次 Begin（同一拥有者任务、两笔请求之间）执行总线恢复
         ++State(bus).errors;
@@ -128,6 +135,10 @@ extern "C" uint32_t LcBus_RecoveryCount(I2C_HandleTypeDef *bus)
 {
     return State(bus).recoveries;
 }
+extern "C" uint32_t LcBus_LastError(I2C_HandleTypeDef *bus)
+{
+    return State(bus).last_error;
+}
 extern "C" int LcBus_Ok(I2C_HandleTypeDef *bus)
 {
     return !State(bus).failed;
@@ -141,7 +152,7 @@ extern "C" HAL_StatusTypeDef LcBus_Transmit(I2C_HandleTypeDef *bus, uint16_t add
 {
     if (!Allowed(bus))
         return HAL_TIMEOUT;
-    return Record(bus, HAL_I2C_Master_Transmit(bus, addr, data, length, Timeout(bus, timeout)));
+    return Record(bus, HAL_I2C_Master_Transmit(bus, addr, data, length, Timeout(bus, timeout)), addr, 1);
 }
 extern "C" HAL_StatusTypeDef LcBus_Receive(I2C_HandleTypeDef *bus, uint16_t addr, uint8_t *data,
                                            uint16_t length, uint32_t timeout)
@@ -149,7 +160,7 @@ extern "C" HAL_StatusTypeDef LcBus_Receive(I2C_HandleTypeDef *bus, uint16_t addr
     memset(data, 0, length);
     if (!Allowed(bus))
         return HAL_TIMEOUT;
-    return Record(bus, HAL_I2C_Master_Receive(bus, addr, data, length, Timeout(bus, timeout)));
+    return Record(bus, HAL_I2C_Master_Receive(bus, addr, data, length, Timeout(bus, timeout)), addr, 2);
 }
 extern "C" HAL_StatusTypeDef LcBus_MemRead(I2C_HandleTypeDef *bus, uint16_t addr, uint16_t reg,
                                            uint16_t reg_size, uint8_t *data, uint16_t length,
@@ -158,7 +169,7 @@ extern "C" HAL_StatusTypeDef LcBus_MemRead(I2C_HandleTypeDef *bus, uint16_t addr
     memset(data, 0, length);
     if (!Allowed(bus))
         return HAL_TIMEOUT;
-    return Record(bus, HAL_I2C_Mem_Read(bus, addr, reg, reg_size, data, length, Timeout(bus, timeout)));
+    return Record(bus, HAL_I2C_Mem_Read(bus, addr, reg, reg_size, data, length, Timeout(bus, timeout)), addr, 3);
 }
 extern "C" HAL_StatusTypeDef LcBus_MemWrite(I2C_HandleTypeDef *bus, uint16_t addr, uint16_t reg,
                                             uint16_t reg_size, uint8_t *data, uint16_t length,
@@ -166,5 +177,5 @@ extern "C" HAL_StatusTypeDef LcBus_MemWrite(I2C_HandleTypeDef *bus, uint16_t add
 {
     if (!Allowed(bus))
         return HAL_TIMEOUT;
-    return Record(bus, HAL_I2C_Mem_Write(bus, addr, reg, reg_size, data, length, Timeout(bus, timeout)));
+    return Record(bus, HAL_I2C_Mem_Write(bus, addr, reg, reg_size, data, length, Timeout(bus, timeout)), addr, 4);
 }
