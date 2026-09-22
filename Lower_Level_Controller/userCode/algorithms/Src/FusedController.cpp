@@ -20,8 +20,8 @@ FusedControlConfiguration BuildControllerConfiguration()
     c.rate[1] = {8, 0, 0, 50, 200}; // PitchInPID
     c.rate[2] = {5, 0, 0, 100, 400}; // YawInPID
     c.angle[2] = {2, 0.01f*50, 2.0f/50, 5, 20}; // YawOutPID，rad -> rad/s。
-    // 30BA 在约 20°C 时旧兼容公式约为 P(Pa)/2000，并非厘米。
-    // TODO：旧低温补偿混合了型号，以下仅为 20°C 附近的线性估算。
+    // 这里的 units_per_m 只服务于保留的旧控制增益换算；新 ESKF 已在 pressure_pa
+    // 接口上使用绝对压力和液面参考，不能把旧控制标度当成传感器单位。
     const auto &physical = GetFusionConfiguration();
     const float units_per_m = physical.water_density_kg_m3*physical.gravity_m_s2/2000.0f;
     c.depth = {10*units_per_m, 0.02f*150*units_per_m,

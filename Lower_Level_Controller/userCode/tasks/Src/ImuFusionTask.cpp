@@ -11,6 +11,7 @@ namespace lower_controller
 {
 namespace tasks
 {
+volatile ImuFrameDiagnostics imu_frame_diagnostics = {};
 namespace
 {
 FusionTimeline timeline(GetFusionConfiguration()); // 唯一拥有 ESKF 状态的对象，固定容量 64 条。
@@ -27,6 +28,14 @@ void DecodeImuPacket(const RawImuPacket &packet)
     observation.kind = packet.kind;
     observation.stamp = packet.stamp;
     float decoded[3] = {};
+    switch (packet.kind)
+    {
+    case SensorKind::Gyroscope: ++imu_frame_diagnostics.gyro_packets; break;
+    case SensorKind::Accelerometer: ++imu_frame_diagnostics.accel_packets; break;
+    case SensorKind::Magnetometer: ++imu_frame_diagnostics.mag_packets; break;
+    case SensorKind::Temperature: ++imu_frame_diagnostics.temperature_packets; break;
+    default: break;
+    }
     if (packet.kind == SensorKind::Gyroscope)
     {
         BMI088_gyro_read_over(const_cast<uint8_t *>(packet.bytes + 1),
@@ -106,10 +115,13 @@ void DecodeImuPacket(const RawImuPacket &packet)
 void ImuFusionTask(void *)
 {
     uint32_t previous_release = 0;
+    uint32_t load_window_start = LcTime_NowUs(), load_busy_us = 0, stack_check_releases = 0;
     for (;;)
     {
         RawImuPacket packet;
-        if (xQueueReceive(imu_raw_samples.handle, &packet, pdMS_TO_TICKS(1)) == pdPASS)
+        const bool received = xQueueReceive(imu_raw_samples.handle, &packet, pdMS_TO_TICKS(1)) == pdPASS;
+        const uint32_t busy_start = LcTime_NowUs(); // 从取到包到本轮结束的时间，用于估算本任务负载。
+        if (received)
             DecodeImuPacket(packet);
         // 最多阻塞 1 ms：即使 DRDY 消失，也要推进超时处理和发布无效状态。
         uint32_t now = LcTime_NowUs();
@@ -130,12 +142,14 @@ void ImuFusionTask(void *)
         }
         timeline.ProcessReady(now,
                               8); // 每轮最多处理 8 条；固定等待 8000 us，迟到超过窗口的观测丢弃。
-        latest_fusion_state = timeline.State(now);
-        fusion_diagnostics = timeline.Diagnostics();
-        imu_acquisition_diagnostics = ReadImuAcquisitionDiagnostics();
         const ControlRelease release = ReadLatestControlRelease();
         if (release.sequence && release.sequence != previous_release)
         {
+            // PERF FIX: 状态快照和诊断只在每个 150 Hz 控制节拍生成一次，而不是每个 IMU 包一次
+            // (约 2000 次/秒)。控制任务和 EDIAG 只读取节拍时刻的快照。
+            latest_fusion_state = timeline.State(now);
+            fusion_diagnostics = timeline.Diagnostics();
+            imu_acquisition_diagnostics = ReadImuAcquisitionDiagnostics();
             ImuAttitudeFrame frame = {};
             frame.release = release;
             frame.fusion = latest_fusion_state;
@@ -152,13 +166,40 @@ void ImuFusionTask(void *)
                               (FusionAttitudeValid | FusionGyroContinuous);
                 // 运行时不再调用旧 Mahony；姿态有效性完全来自新估计器。
             }
+            // Record the first failing condition so EDIAG shows why the frame was rejected.
+            ++imu_frame_diagnostics.published;
+            imu_frame_diagnostics.last_gyro_age_us = have_gyro ? now - gyro_time : 0xffffffffU;
+            imu_frame_diagnostics.last_accel_age_us = have_accel ? now - accel_time : 0xffffffffU;
+            imu_frame_diagnostics.last_flags = frame.fusion.flags;
+            if (frame.valid) ++imu_frame_diagnostics.valid;
+            else if (!continuous) ++imu_frame_diagnostics.discontinuous;
+            else if (!have_gyro) ++imu_frame_diagnostics.no_gyro;
+            else if (!have_accel) ++imu_frame_diagnostics.no_accel;
+            else if (now - gyro_time > 3000U) ++imu_frame_diagnostics.gyro_stale;
+            else if (now - accel_time > 3000U) ++imu_frame_diagnostics.accel_stale;
+            else ++imu_frame_diagnostics.bad_flags;
             if (!frame.valid)
                 LatchOutputStop();
             frame.completed_us = LcTime_NowUs();
             xQueueOverwrite(imu_attitude_frames.handle, &frame);
+            controller_task_diagnostics.i2c3_errors = LcBus_ErrorCount(&hi2c3);
+            // PERF FIX: uxTaskGetStackHighWaterMark 逐字节扫描空闲栈(8 KB 栈约 2 万周期)。
+            // 原先每个 IMU 包调用一次，约占 1/4 CPU，饿死了低优先级的控制/I2C2 任务，
+            // 使 MS5837 的 1 ms HAL 超时误触发 → I2C2 错误 → StopBusReplyTimeout 致命锁存。改为约每秒一次。
+            if (++stack_check_releases >= LC_CONTROL_HZ)
+            {
+                stack_check_releases = 0;
+                controller_task_diagnostics.imu_attitude_stack_free = uxTaskGetStackHighWaterMark(NULL);
+            }
         }
-        controller_task_diagnostics.i2c3_errors = LcBus_ErrorCount(&hi2c3);
-        controller_task_diagnostics.imu_attitude_stack_free = uxTaskGetStackHighWaterMark(NULL);
+        const uint32_t end = LcTime_NowUs();
+        load_busy_us += end - busy_start;
+        if (end - load_window_start >= 1000000U)
+        {
+            imu_frame_diagnostics.load_permille = uint32_t(uint64_t(load_busy_us) * 1000U / (end - load_window_start));
+            load_busy_us = 0;
+            load_window_start = end;
+        }
     }
 }
 } // namespace tasks

@@ -31,7 +31,7 @@ void ImuAttitudeTask(void *)
         IMU::imu.Handle(); // 仅 IDLE 时启动陀螺仪 DMA；随后由中断衔接加速度和温度
         if (xSemaphoreTake(imu_dma_done, pdMS_TO_TICKS(LC_IMU_DMA_TIMEOUT_MS)) == pdPASS)
         {                                          // 4 ms
-            LcBus_Begin(&hi2c3, LC_BUS_BUDGET_US); // 磁力计总线由本任务独占，预算 5000 us
+            LcBus_Begin(&hi2c3, LC_BUS_BUDGET_US); // 磁力计总线由本任务独占，沿用当前总线事务预算
             ImuMeasurement measurement = {};
             if (IMU::imu.FinishAcquisition(measurement))
             { // 在任务中消费 READY 缓冲并解码；失败不交付有效帧

@@ -6,10 +6,10 @@
 |---|---|
 | 硬件版本 | V33，STM32F407IG，RoboMaster C 板 |
 | 时钟 | HSE 12 MHz → HCLK 168 MHz |
-| 调度 | 150 Hz 控制/温控，50 Hz 姿态外环与完整压力帧 |
+| 调度 | 150 Hz 控制/温控，旧水压三阶段每三次释放完成一帧，VOFA 默认50 Hz |
 | 陀螺仪/加速度 | BMI088 DRDY 1000/800 Hz，SPI1 DMA；加速度 ±3g |
 | 磁力计 | IST8310，I2C3，新 DRDY 数据 |
-| 压力 | 四个 MS5837-30BA，OSR1024，转换等待≥3 ms |
+| 压力 | 四个 MS5837-30BA，OSR1024，旧代码转换等待2 ms |
 | I2C2 | TCA0..3 水压；TCA4 PCA9685 |
 | PWM | 50 Hz；PCA0..7 推进器，8..11 舵机 |
 | 推进器 | 中位1550 us，限幅1000..2000 us，死区1510..1610 us，补偿+60/-40 us |
@@ -57,8 +57,12 @@ TCA顺序已由V3.3设计p7明确，替代此前从旧site推定的前后位置�
 
 `FusedController.cpp` 为实际输出控制器。深度环及角速度环150 Hz，角度外环50 Hz，I/D 使用实际秒数。
 旧速率环比例增益 roll/pitch/yaw=8/8/5；其他初值按 `Ki_new=Ki_old*f`、`Kd_new=Kd_old/f` 换算。
-30BA 旧兼容刻度约为 Pa/2000（20°C 附近），再用 rho*g 和上述口沿几何换成米、弧度输入。
-新控制的 pressure→Pa 已使用独立的 30BA 温补。
+原工程公式的 legacy 绝对压力数值在空气中约为 1000～1015；旧闭环再减去约 1004 的 V33
+零偏，所以兼容反馈中会看到旧水头刻度。当前读数链路直接使用真实旧工程的
+`Handle_all()`、OSR1024、每次转换等待2 ms和PROM CRC仍沿用旧路径；启动时在空气中对四路各采样
+100次，按同一 legacy 公式建立水面 Pa 参考，并同步更新 legacy 零偏。`AcquireTimedPressure()`
+仍未启用。VOFA 第0～3通道直接发送旧 `data_pressure[]` 数值和两位小数，不经过 Pa/米换算或
+calibrated 显示门控；ESKF 使用启动采样的水面参考。
 
 PWM 分配沿用原正反桨、通道和向下推力的脉宽符号。新 FRD 满足 `Mx=y*Fz, My=-x*Fz`，
 因此新 pitch 列按“前上后下”为正生成，不能把原压差控制的全部符号直接复制进来。
@@ -82,12 +86,13 @@ PWM 分配沿用原正反桨、通道和向下推力的脉宽符号。新 FRD �
 | MOT:a,b,c,d | 原四路舵机命令 |
 | VOFA:ON / VOFA:OFF | 开/关默认50Hz、16通道FireWater显示，不影响控制 |
 | FLOG:ON / FLOG:OFF | 同VOFA开关，兼容别名 |
-| CA | 停止并提示在空气中重新上电校准 |
+| CA | 兼容旧命令；请求重新启动并在空气中完成一次上电压力标定 |
 | FB:ESKF | 回复OK，模式本来就是ESKF |
 | FB:LEGACY / FB:SHADOW | 拒绝；交付版本不切回旧控制 |
 
-VOFA显示顺序：roll_deg,pitch_deg,yaw_deg,depth_m,p0_m,p1_m,p2_m,p3_m,STOP,READY,CAL,RAW_MASK,FAULT,FUSED_MASK,FLAGS,SEQ。
-每行以 `vofa:` 开头、CRLF结束，完整行作为一个192字节容量的消息入队，名义10Hz。
+VOFA显示顺序：p0_legacy,p1_legacy,p2_legacy,p3_legacy,roll_deg,pitch_deg,yaw_deg,depth_m,STOP,READY,CAL,RAW_MASK,FAULT,FUSED_MASK,ERROR_CODE,SEQ。
+ERROR_CODE低8位为最后停止原因，8～15位为累计I2C2错误，16～31位为ESKF flags。
+每行以 `vofa:` 开头、CRLF结束，完整行作为一个192字节容量的消息入队，默认50Hz。
 -9999表示缺测/过期；SEQ是16位显示包序号，断线后旧数据显示不能作为当前状态。
 状态文本改用 `CAL= / CTRL= / STAT= / FB=`，避免冒号后非数字被FireWater误解析。命令里的冒号保持不变。
 旧F/Q日志及旧四路兼容压力裸CSV不再从默认控制任务输出。内部ESKF仍为SI弧度，显示层转换为度。

@@ -113,8 +113,12 @@ void StartImuDmaAcquisition(ImuPacketPublisher publisher)
     ClearFlags();
     __HAL_DMA_ENABLE_IT(&hdma_spi1_rx, DMA_IT_TC | DMA_IT_TE | DMA_IT_DME);
     __HAL_DMA_ENABLE_IT(&hdma_spi1_tx, DMA_IT_TE | DMA_IT_DME);
-    __HAL_DMA_ENABLE_IT(&hdma_spi1_rx, DMA_IT_FE); // FE 位在 FCR，必须与 CR 中的 TC/TE/DME 分开设置。
-    __HAL_DMA_ENABLE_IT(&hdma_spi1_tx, DMA_IT_FE);
+    // BUG FIX: 不再开启 FE 中断。SPI1 的两个 DMA 流为直接模式(FIFOMode=DISABLE)，
+    // TX 流使能瞬间 SPI TXE 已经在请求，FEIF 几乎每次都会置位；这是良性的，数据照常传完。
+    // 原先把 FE 当致命错误，导致每个陀螺/加计/温度包都被中止(DMAE≈DRDY 频率，PKT=0)。
+    // 原版 bsp_spi.cpp 的 SPI1_DMA_init 也只开 RX 的 TC 中断，从不检查 FE。
+    __HAL_DMA_DISABLE_IT(&hdma_spi1_rx, DMA_IT_FE);
+    __HAL_DMA_DISABLE_IT(&hdma_spi1_tx, DMA_IT_FE);
 }
 void ImuDataReady(SensorKind kind, uint32_t time_us)
 {
@@ -136,14 +140,27 @@ void ImuDmaInterrupt()
 {
     uint32_t mask = __get_PRIMASK();
     __disable_irq();
+    // 直接模式下 FE 不代表数据损坏，只计数、不中止；TE(总线错误)/DME(直接模式错误)仍视为失败。
     const uint32_t rx_errors = __HAL_DMA_GET_TE_FLAG_INDEX(&hdma_spi1_rx) |
-                               __HAL_DMA_GET_DME_FLAG_INDEX(&hdma_spi1_rx) |
-                               __HAL_DMA_GET_FE_FLAG_INDEX(&hdma_spi1_rx);
+                               __HAL_DMA_GET_DME_FLAG_INDEX(&hdma_spi1_rx);
     const uint32_t tx_errors = __HAL_DMA_GET_TE_FLAG_INDEX(&hdma_spi1_tx) |
-                               __HAL_DMA_GET_DME_FLAG_INDEX(&hdma_spi1_tx) |
-                               __HAL_DMA_GET_FE_FLAG_INDEX(&hdma_spi1_tx);
+                               __HAL_DMA_GET_DME_FLAG_INDEX(&hdma_spi1_tx);
+    const uint32_t bits =
+        (__HAL_DMA_GET_FLAG(&hdma_spi1_rx, __HAL_DMA_GET_TE_FLAG_INDEX(&hdma_spi1_rx)) ? 1U << 0 : 0U) |
+        (__HAL_DMA_GET_FLAG(&hdma_spi1_rx, __HAL_DMA_GET_DME_FLAG_INDEX(&hdma_spi1_rx)) ? 1U << 1 : 0U) |
+        (__HAL_DMA_GET_FLAG(&hdma_spi1_rx, __HAL_DMA_GET_FE_FLAG_INDEX(&hdma_spi1_rx)) ? 1U << 2 : 0U) |
+        (__HAL_DMA_GET_FLAG(&hdma_spi1_tx, __HAL_DMA_GET_TE_FLAG_INDEX(&hdma_spi1_tx)) ? 1U << 3 : 0U) |
+        (__HAL_DMA_GET_FLAG(&hdma_spi1_tx, __HAL_DMA_GET_DME_FLAG_INDEX(&hdma_spi1_tx)) ? 1U << 4 : 0U) |
+        (__HAL_DMA_GET_FLAG(&hdma_spi1_tx, __HAL_DMA_GET_FE_FLAG_INDEX(&hdma_spi1_tx)) ? 1U << 5 : 0U);
+    if (bits & ((1U << 2) | (1U << 5)))
+    {
+        ++arbiter.diagnostics.fe_seen;
+        __HAL_DMA_CLEAR_FLAG(&hdma_spi1_rx, __HAL_DMA_GET_FE_FLAG_INDEX(&hdma_spi1_rx));
+        __HAL_DMA_CLEAR_FLAG(&hdma_spi1_tx, __HAL_DMA_GET_FE_FLAG_INDEX(&hdma_spi1_tx));
+    }
     if (__HAL_DMA_GET_FLAG(&hdma_spi1_rx, rx_errors) || __HAL_DMA_GET_FLAG(&hdma_spi1_tx, tx_errors))
     {
+        arbiter.diagnostics.last_error_bits = bits;
         abort_pending = true;
         __HAL_DMA_DISABLE(&hdma_spi1_rx);
         __HAL_DMA_DISABLE(&hdma_spi1_tx);

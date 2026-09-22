@@ -7,7 +7,8 @@
 #include "LegacyEstimation.h"
 #if LC_USE_FREERTOS
 #include "FusionConfiguration.h"
-// TODO(标度)：30BA 的旧兼容公式在 20°C 附近为 P(Pa)/2000；低温时须验证旧混合温补。
+// 旧命令接口的深度步进仍保留历史标度；它与新 ESKF 的 pressure_pa 接口相互独立，
+// 不要用这个命令换算反推 MS5837 的原始压力单位。
 static float LegacyDepthFromCm(float cm)
 {
     const auto &c = lower_controller::GetFusionConfiguration();

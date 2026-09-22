@@ -1,16 +1,13 @@
 #include "Sensor.h"
 #include "Kalman_Filter.h"
-#include "LegacyEstimation.h"
 #include "I2cBusAccess.h"
 #include "ControllerRtosHooks.h"
+#include <math.h>
 #if LC_USE_FREERTOS
-#include "PressureCompensation.h"
+#include "LegacyEstimation.h"
 #endif
-
-// OSR commands below retain the original conversion configuration.
-// 下方转换命令保留原 OSR1024，集中配置必须与实际命令一致。
-#if LC_PRESSURE_OSR != 1024U
-#error "Update the pressure conversion commands and timing contract together."
+#if LC_IMU_ASYNC_ENABLED
+#include "FusionConfiguration.h" // lower_controller::SetStartupSurfacePressure()
 #endif
 
 extern I2C_HandleTypeDef hi2c2;
@@ -25,7 +22,8 @@ KalmanFilter Pressure_Kf[4] = {KalmanFilter(0.01, 0.05, 1.0, 0.0),
 void PressureSensor::Init()
 {
 
-    // Original inactive plane-solver coordinates. Active ESKF geometry is in FusionConfiguration.cpp.
+		// ------ TODO: 3D coordinates of the four pressure sensors. These values must be obtained via measurement and updated accordingly.
+    //------TODO:4个水压计三维坐标，由测量得到，需要修改
     Sensor_Site_t _site = {
         .x = {-12, 12, 12, -12},
         .y = {-5.4, -5.4, 5.4, 5.4},
@@ -65,46 +63,52 @@ void PressureSensor::Init()
 */
 }
 
-#if LC_USE_FREERTOS
+/* Startup calibration is also the point where the ESKF receives its surface
+ * pressure reference.  Merely accepting the legacy PROM check leaves
+ * pressure_calibration_confirmed false and makes every ESKF pressure frame
+ * unusable, even though the four legacy values still look healthy. */
 bool PressureSensor::CalibrateAtStartup()
 {
-    // TODO(操作)：必须四个压力口在空气中、静止时上电。软件无法识别“在水下但压力稳定”。
-    // 不写 Flash：每次正常上电重新测零；看门狗恢复启动由 main 禁止重新归零。
     startup_calibration = {};
-    startup_calibration.state = 1;
+    startup_calibration.state = 1; // 1=采集中
     startup_calibration.failed_channel = 4;
     startup_calibration_ok_ = false;
+
     if (LcRuntime_IsRunning() || !PromValid())
     {
-        for (unsigned i = 0; i < 4; ++i)
+        for (unsigned i = 0; i < SENSOR_NUM; ++i)
             if (!flag_ok[i]) { startup_calibration.failed_channel = i; break; }
         startup_calibration.state = 3;
         return false;
     }
+
+    // Let the sensors settle before defining the air/surface reference.  The
+    // calibration runs before the scheduler owns I2C2, so it can use one
+    // bounded transaction budget for the complete sample set.
     HAL_Delay(LC_STARTUP_PRESSURE_SETTLE_MS);
     LcBus_Begin(&hi2c2, LC_CALIBRATION_BUDGET_US);
-    double pressure_sum[4] = {}, legacy_sum[4] = {};
-    float minimum[4] = {1e9f,1e9f,1e9f,1e9f}, maximum[4] = {};
+
+    double sum[SENSOR_NUM] = {};
+    float minimum[SENSOR_NUM], maximum[SENSOR_NUM];
+    for (unsigned i = 0; i < SENSOR_NUM; ++i)
+        minimum[i] = 1e9f, maximum[i] = -1e9f;
+
     for (unsigned sample = 0; sample < LC_STARTUP_PRESSURE_SAMPLES; ++sample)
     {
-        for (unsigned i = 0; i < 4; ++i)
+        for (unsigned i = 0; i < SENSOR_NUM; ++i)
         {
             startup_calibration.failed_channel = i;
             TCA_SetChannel(i);
-            const float legacy = MS5837_30BA_GetData(i); // 同一对 D1/D2 同时用于两条反馈路径。
-            const auto physical = lower_controller::CompensateMs5837(
-                lower_controller::GetFusionConfiguration().pressure_model, Cal_C[i], D1_Pres, D2_Temp);
-            if (!LcBus_Ok(&hi2c2) || !physical.valid || !isfinite(legacy) ||
-                physical.pressure_pa < 80000 || physical.pressure_pa > 120000)
+            const float pressure = MS5837_30BA_GetData(i); // legacy mbar 量级
+            if (!LcBus_Ok(&hi2c2) || !isfinite(pressure) || pressure < 800.0f || pressure > 1200.0f)
             {
                 startup_calibration.state = 3;
-                return false; // 不提交部分通道的偏置，不沿用失效 ADC。
+                return false;
             }
-            pressure_sum[i] += physical.pressure_pa;
-            legacy_sum[i] += legacy;
-            minimum[i] = fminf(minimum[i], physical.pressure_pa);
-            maximum[i] = fmaxf(maximum[i], physical.pressure_pa);
-            startup_calibration.spread_pa[i] = maximum[i] - minimum[i];
+            sum[i] += pressure;
+            if (pressure < minimum[i]) minimum[i] = pressure;
+            if (pressure > maximum[i]) maximum[i] = pressure;
+            startup_calibration.spread_pa[i] = (maximum[i] - minimum[i]) * 100.0f;
             if (startup_calibration.spread_pa[i] > LC_STARTUP_PRESSURE_SPREAD_PA)
             {
                 startup_calibration.state = 3;
@@ -113,87 +117,69 @@ bool PressureSensor::CalibrateAtStartup()
         }
         startup_calibration.samples = sample + 1;
     }
-    float surface[4];
-    for (unsigned i = 0; i < 4; ++i) surface[i] = float(pressure_sum[i]/LC_STARTUP_PRESSURE_SAMPLES);
-    if (!lower_controller::SetStartupSurfacePressure(surface))
+
+    float surface_pa[SENSOR_NUM] = {};
+    for (unsigned i = 0; i < SENSOR_NUM; ++i)
     {
+        surface_pa[i] = float(sum[i] / double(LC_STARTUP_PRESSURE_SAMPLES) * 100.0);
+        startup_calibration.surface_pa[i] = surface_pa[i];
+        // Keep the known legacy display/control scale in sync with the same
+        // air sample; the ESKF uses surface_pa[] below.
+        data_pressure_offset[i] = surface_pa[i] / 100.0f;
+        data_pressure_raw[i] = data_pressure_offset[i];
+    }
+
+#if LC_IMU_ASYNC_ENABLED
+    if (!lower_controller::SetStartupSurfacePressure(surface_pa))
+    {
+        // The range check above should make this unreachable; keep the
+        // explicit failure path so a bad reference can never unlock ESKF.
         startup_calibration.state = 3;
+        startup_calibration.failed_channel = 4; // 4 表示全局条件不满足，不针对单一通道
+        startup_calibration_ok_ = false;
         return false;
     }
-    for (unsigned i = 0; i < 4; ++i)
-    {
-        startup_calibration.surface_pa[i] = surface[i];
-        data_pressure_offset[i] = float(legacy_sum[i]/LC_STARTUP_PRESSURE_SAMPLES);
-        data_pressure[i] = data_pressure_raw[i] = 0;
-        Pressure_Kf[i] = KalmanFilter(0.01, 0.05, 1.0, 0.0);
-    }
-    last_measurement_ = {};
-    feedback_ = {};
-    estimated_sequence_ = 0;
-    data_depth = data_roll = data_pitch = 0;
-    ps_state = PS_HANDLE_STATE::GET_TEMPERATURE;
-#if LC_IMU_ASYNC_ENABLED
-    ResetTimedAcquisition();
 #endif
-    startup_calibration.failed_channel = 4;
-    startup_calibration.state = 2;
+
+    startup_calibration.state = 2; // 2=成功
     startup_calibration_ok_ = true;
     return true;
 }
-#endif
+
+void PressureSensor::Acquire()
+{
+    if (flag_calibrate)
+    {
+        Calibrate();
+        flag_calibrate = false;
+    }
+    else
+    {
+        // Deliberately keep the old three-state Handle_all() path.  The newer
+        // AcquireTimedPressure() validation path is not part of this build.
+        Handle_all();
+    }
+}
 
 void PressureSensor::Handle()
 {
     const PS_HANDLE_STATE previous = ps_state;
     Acquire();
-    if (!LcBus_Ok(&hi2c2)) return; // 本次总线请求失败：不交付新估计或继续累计校准样本
-    // CALCULATE is the NEXT driver step. The old outer loop uses the previous frame.
-    // CALCULATE 表示下一步将读取压强；由协调入口保留旧外环相位。
-    Estimate(last_measurement_, previous != ps_state && ps_state == PS_HANDLE_STATE::CALCULATE); // 4 路旧压力；true 表示旧外环相位
-}
-
-void PressureSensor::Acquire()
-{
-    // Preserve calibration behavior and one state-machine step per scheduler tick.
-    // 保留校准分支和每个主节拍推进一步的三阶段采集流程。
-    if (flag_calibrate) {
-        Calibrate();
-        flag_calibrate = false;
-    } else {
-#if LC_IMU_ASYNC_ENABLED
-        AcquireTimedPressure();
-#else
-        Handle_all();
-#endif
-    }
-}
-
-void PressureSensor::Estimate(const lower_controller::PressureMeasurement& sample, bool outer_loop_due)
-{
-    // Consume each delivered frame once; repeated calls only refresh the loop phase.
-    // 一帧只滤波一次；其余节拍仅刷新外环相位，本函数不读取外设或驱动状态。
-    if (sample.sequence != estimated_sequence_) {
-        FilterMeasurement(sample); // sample 为温补后、去偏滤波前的四路压力
-        estimated_sequence_ = sample.sequence;
-    }
+    data_depth = (data_pressure[3] + data_pressure[2] + data_pressure[1] + data_pressure[0]) / 4;
+    data_roll = data_pressure[0] + data_pressure[1] - data_pressure[2] - data_pressure[3];
+    data_pitch = data_pressure[0] + data_pressure[3] - data_pressure[1] - data_pressure[2];
     feedback_ = lower_controller::EstimateLegacyPressure(data_pressure,
-        outer_loop_due, estimated_sequence_);
-    data_depth = feedback_.depth_legacy; // 四路均值，旧深度刻度
-    data_roll = feedback_.roll_difference_legacy; // p0+p1-p2-p3，旧压差
-    data_pitch = feedback_.pitch_difference_legacy; // p0+p3-p1-p2，旧压差
+        previous == PS_HANDLE_STATE::CALCULATE && ps_state == PS_HANDLE_STATE::GET_TEMPERATURE,
+        last_measurement_.sequence);
 }
 
-void PressureSensor::FilterMeasurement(const lower_controller::PressureMeasurement& sample)
+void PressureSensor::Estimate(const lower_controller::PressureMeasurement &, bool outer_loop_due)
 {
-    for (int i = 0; i < SENSOR_NUM; ++i) {
-        // A failed PROM must not introduce an uninitialized stack value into feedback.
-        // PROM 无效通道保留上一值，避免把未初始化值传入滤波；此处不新增故障控制策略。
-        if ((sample.prom_valid_mask & (1U << i)) == 0U) continue;
-        data_pressure_raw[i] = sample.pressure_legacy[i];
-        float pressure = data_pressure_raw[i] - data_pressure_offset[i];
-        pressure = Pressure_Kf[i].update(pressure);
-        data_pressure[i] = pressure;
-    }
+    feedback_ = lower_controller::EstimateLegacyPressure(data_pressure, outer_loop_due,
+                                                         last_measurement_.sequence);
+    data_depth = feedback_.depth_legacy;
+    data_roll = feedback_.roll_difference_legacy;
+    data_pitch = feedback_.pitch_difference_legacy;
 }
 
 void PressureSensor::Receive()
@@ -210,7 +196,12 @@ void PressureSensor::Receive()
 
 void PressureSensor::Delay_us(uint32_t us)
 {
-    LcTime_DelayUs(us);
+    uint32_t i;
+    for (i = 0; i < us; i++)
+    {
+        int a = 10; // delay based on main clock, 168Mhz
+        while (a--);
+    }
 }
 
 unsigned char PressureSensor::MS5837_30BA_Crc4(int id)
@@ -267,7 +258,7 @@ uint8_t PressureSensor::MS5837_30BA_PROM(int id)
     uint8_t data[2];
     int i;
 
-    MS5837_30BA_ReSet(); // 复位 MS5837 后再读取 PROM。
+    MS5837_30BA_ReSet(); // ��λMS5837
     HAL_Delay(20);
     for (i = 0; i < 7; i++)
     {
@@ -285,11 +276,7 @@ unsigned long PressureSensor::MS5837_30BA_GetConversion(uint8_t command)
     uint8_t data = MS5837_30BA_ADC_RD;
     uint8_t temp[3];
     LcBus_Transmit(&hi2c2, B02_IIC_ADDRESS, &command, 1, 0xffff);
-#if LC_USE_FREERTOS
-    HAL_Delay(4); // OSR1024 至少 3 ms；额外 1 tick 覆盖 FreeRTOS tick 对齐的不确定性。
-#else
-    HAL_Delay(2); // 只供原始算法回归；生产 FreeRTOS 路径使用上方转换等待。
-#endif
+    HAL_Delay(2);
     // Delay_us(15000);
     LcBus_Transmit(&hi2c2, B02_IIC_ADDRESS, &data, 1, 0xffff);
 
@@ -318,11 +305,6 @@ float PressureSensor::MS5837_30BA_GetData(int id)
         // HAL_Delay(1);
         // Delay_us(30000);
         D1_Pres = MS5837_30BA_GetConversion(MS5837_30BA_D1_OSR1024);
-#if LC_USE_FREERTOS
-        // 通信失败产生的 0/全 1 不能先进入旧温补平方项；先拒绝，再由校准/控制调用方处理。
-        if (!LcBus_Ok(&hi2c2) || D1_Pres == 0 || D2_Temp == 0 ||
-            D1_Pres >= 0xffffffU || D2_Temp >= 0xffffffU) return NAN;
-#endif
         // HAL_Delay(3);
         // Delay_us(30000);
         dT = D2_Temp - (((uint32_t)Cal_C[id][5]) * 256l);
@@ -331,7 +313,7 @@ float PressureSensor::MS5837_30BA_GetData(int id)
 
         TEMP = 2000l + (int64_t)(dT)*Cal_C[id][6] / 8388608LL;
 
-        // 旧二阶温补表达式，仅用于 legacy 数值兼容；新 SI 补偿见 PressureCompensation.cpp。
+        // �����¶Ȳ���
         if (TEMP < 2000) // low temp
         {
 
@@ -341,7 +323,7 @@ float PressureSensor::MS5837_30BA_GetData(int id)
         }
         else
         { // high temp
-            Ti = 2LL * int64_t(dT) * int64_t(dT) / 137438953472LL;
+            Ti = 2 * (dT * dT) / (137438953472LL);
             OFFi = (1 * (TEMP - 2000) * (TEMP - 2000)) / 16;
             SENSi = 0;
         }
@@ -357,7 +339,9 @@ float PressureSensor::MS5837_30BA_GetData(int id)
         float pressure = ((D1_Pres * SENS2) / 2097152.0 - OFF2) / 32768.0 / 100.0;
         return pressure;
 
+        // data_pressure = ((D1_Pres * SENS2) / 2097152.0 - OFF2) / 32768.0 / 100.0;          //У׼��ѹ������
 
+        // Temperature = (TEMP - Ti) / 100.0;                                //У׼���¶�����
     }
     else
         return -1;
@@ -420,7 +404,6 @@ void PressureSensor::Calibrate()
         TCA_SetChannel(i);
         // HAL_Delay(5);
         Calibrate_single(i);
-        if (!LcBus_Ok(&hi2c2)) return; // 本次总线请求失败：不交付新估计或继续累计校准样本
     }
     // bsp_flash_write(&flashData);
 }
@@ -432,7 +415,6 @@ void PressureSensor::Calibrate_single(int id)
     for (int j = 0; j < 100; ++j)
     {
         data_pressure_raw[id] = MS5837_30BA_GetData(id);
-        if (!LcBus_Ok(&hi2c2)) return; // 本次总线请求失败：不交付新估计或继续累计校准样本
         data_pressure_offset[id] += data_pressure_raw[id] / 100;
     }
     int data_temp = (int)(data_pressure_offset[id] * 1000);
@@ -455,11 +437,7 @@ void PressureSensor::Calibrate_single(int id)
         TxBuffer[id * 9 + 8] = '\n';
     else
         TxBuffer[id * 9 + 8] = ',';
-    #if LC_USE_FREERTOS
-    LcSerial_Write(TxBuffer, sizeof(TxBuffer)); // 发送队列复制数据
-#else
-    HAL_UART_Transmit(&huart6, TxBuffer, sizeof(TxBuffer), 0xffff);
-#endif
+    LcSerial_Write(TxBuffer, sizeof(TxBuffer));
 }
 
 void PressureSensor::OutputData()
@@ -502,11 +480,7 @@ void PressureSensor::OutputData_single(int id)
         TxBuffer[9] = '\n';
     else
         TxBuffer[9] = ',';
-    #if LC_USE_FREERTOS
-    LcSerial_Write(TxBuffer, sizeof(TxBuffer)); // 发送队列复制数据
-#else
-    HAL_UART_Transmit(&huart6, TxBuffer, sizeof(TxBuffer), 0x00ff);
-#endif
+    LcSerial_Write(TxBuffer, sizeof(TxBuffer));
 }
 
 void PressureSensor::Handle_single(int id)
@@ -532,12 +506,9 @@ void PressureSensor::Handle_all()
     static uint8_t command_tmp = MS5837_30BA_D2_OSR1024;
     static uint8_t command_pres = MS5837_30BA_D1_OSR1024;
     static uint8_t temp[3];
-    static unsigned long conversion[8];    // conversion[0..3] 为四路 D2 温度 ADC，[4..7] 为四路 D1 压力 ADC；这里是数组元素，不是二进制位
+    static float tmp_pres;
+    static unsigned long conversion[8];    // The upper four bits of `conversion` store temperature data, and the lower four bits store pressure information. //conversion的前四位存储温度数据，后四位存储水压信息
 
-#if LC_USE_FREERTOS
-    if (ps_state != PS_HANDLE_STATE::GET_TEMPERATURE &&
-        LcTime_NowUs() - conversion_started_us_ < LC_PRESSURE_CONVERSION_US) return; // 3000 us；晚释放时不提前读取 ADC
-#endif
     switch (ps_state) {
         case PS_HANDLE_STATE::GET_TEMPERATURE:
             // Notify the sensor to prepare temperature data.
@@ -545,12 +516,9 @@ void PressureSensor::Handle_all()
             for (int i = 0; i < SENSOR_NUM; ++i)
             {
                 TCA_SetChannel(i);
-                LcBus_Transmit(&hi2c2, B02_IIC_ADDRESS, &command_tmp, 1, 1); // 地址 0xEC，命令 0x54；1 字节，HAL 超时参数 1 ms
+                LcBus_Transmit(&hi2c2, B02_IIC_ADDRESS, &command_tmp, 1, 1);
             }
-            if (!LcBus_Ok(&hi2c2)) { ps_state = PS_HANDLE_STATE::GET_TEMPERATURE; return; }
-#if LC_USE_FREERTOS
-            conversion_started_us_ = LcTime_NowUs(); // 最后一路转换命令发送完成时间；随后至少等待 3000 us
-#endif
+            frame_bus_ok_ = LcBus_Ok(&hi2c2) != 0; // 新一帧从温度转换命令开始
             ps_state = PS_HANDLE_STATE::GET_PRESSURE;
             break;
 
@@ -560,8 +528,8 @@ void PressureSensor::Handle_all()
             for (int i = 0; i < SENSOR_NUM; ++i)
             {
                 TCA_SetChannel(i);
-                LcBus_Transmit(&hi2c2, B02_IIC_ADDRESS, &data, 1, 1); // 0xEC 器件写 ADC 读取命令 0x00；1 字节，HAL 超时参数 1 ms
-                LcBus_Receive(&hi2c2, B02_IIC_ADDRESS, temp, 3, 1); // 从 0xEC 读取 3 字节 ADC 结果；HAL 超时参数 1 ms
+                LcBus_Transmit(&hi2c2, B02_IIC_ADDRESS, &data, 1, 1);
+                LcBus_Receive(&hi2c2, B02_IIC_ADDRESS, temp, 3, 1);
                 conversion[i] = (unsigned long)temp[0] * 65536 + (unsigned long)temp[1] * 256 + (unsigned long)temp[2];
             }
 
@@ -570,12 +538,9 @@ void PressureSensor::Handle_all()
             for (int i = 0; i < SENSOR_NUM; ++i)
             {
                 TCA_SetChannel(i);
-                LcBus_Transmit(&hi2c2, B02_IIC_ADDRESS, &command_pres, 1, 1); // 地址 0xEC，命令 0x44；1 字节，HAL 超时参数 1 ms
+                LcBus_Transmit(&hi2c2, B02_IIC_ADDRESS, &command_pres, 1, 1);
             }
-            if (!LcBus_Ok(&hi2c2)) { ps_state = PS_HANDLE_STATE::GET_TEMPERATURE; return; }
-#if LC_USE_FREERTOS
-            conversion_started_us_ = LcTime_NowUs(); // 最后一路转换命令发送完成时间；随后至少等待 3000 us
-#endif
+            frame_bus_ok_ = frame_bus_ok_ && LcBus_Ok(&hi2c2);
             ps_state = PS_HANDLE_STATE::CALCULATE;
             break;
 
@@ -585,23 +550,29 @@ void PressureSensor::Handle_all()
             for (int i = 0; i < SENSOR_NUM; ++i)
             {
                 TCA_SetChannel(i);
-                LcBus_Transmit(&hi2c2, B02_IIC_ADDRESS, &data, 1, 1); // 0xEC 器件写 ADC 读取命令 0x00；1 字节，HAL 超时参数 1 ms
-                LcBus_Receive(&hi2c2, B02_IIC_ADDRESS, temp, 3, 1); // 从 0xEC 读取 3 字节 ADC 结果；HAL 超时参数 1 ms
+                LcBus_Transmit(&hi2c2, B02_IIC_ADDRESS, &data, 1, 1);
+                LcBus_Receive(&hi2c2, B02_IIC_ADDRESS, temp, 3, 1);
                 conversion[i+4] = (unsigned long)temp[0] * 65536 + (unsigned long)temp[1] * 256 + (unsigned long)temp[2];
             }
 
 						// Refer to `float PressureSensor::MS5837_30BA_GetData(int id)` to compute the four raw pressure values.
             // 参考float PressureSensor::MS5837_30BA_GetData(int id)计算四个原始压强
-            if (!LcBus_Ok(&hi2c2)) { ps_state = PS_HANDLE_STATE::GET_TEMPERATURE; return; }
-            lower_controller::PressureMeasurement sample = {};
-            sample.sequence = last_measurement_.sequence + 1U;
-            sample.read_completed_ms = HAL_GetTick();
+            if (!frame_bus_ok_ || !LcBus_Ok(&hi2c2))
+            {
+                // 本帧任一步 I2C2 出错：LcBus_Receive 已把失败读数清零，按公式会算出约 -946 的假压力，
+                // 并污染一阶滤波和 ESKF。整帧丢弃，保留上一帧数值，本帧不发布给 ESKF。
+                ++bus_frame_drops_;
+#if LC_IMU_ASYNC_ENABLED
+                legacy_frame_valid_ = false;
+#endif
+                ps_state = PS_HANDLE_STATE::GET_TEMPERATURE;
+                break;
+            }
+            float pressure[4];
             for (int i = 0; i < SENSOR_NUM; ++i)
             {
-                sample.pressure_legacy[i] = data_pressure_raw[i];
                 if (flag_ok[i])
                 {
-                    sample.prom_valid_mask |= (1U << i);
                     D2_Temp = conversion[i];
                     D1_Pres = conversion[i+4];
                     dT = D2_Temp - (((uint32_t)Cal_C[i][5]) * 256l);
@@ -618,21 +589,58 @@ void PressureSensor::Handle_all()
                     }
                     else
                     { // high temp
-                        Ti = 2LL * int64_t(dT) * int64_t(dT) / 137438953472LL;
+                        Ti = 2 * (dT * dT) / (137438953472LL);
                         OFFi = (1 * (TEMP - 2000) * (TEMP - 2000)) / 16;
                         SENSi = 0;
                     }
                     OFF2 = OFF_ - OFFi;
                     SENS2 = SENS - SENSi;
-                    sample.pressure_legacy[i] = ((D1_Pres * SENS2) / 2097152.0 - OFF2) / 32768.0 / 100.0;
+                    pressure[i] = ((D1_Pres * SENS2) / 2097152.0 - OFF2) / 32768.0 / 100.0;
                 }
                 // else
                 //     return -1;
             }
 
-        // Deliver one completed array measurement; the estimator consumes it after Acquire.
-        // 一轮采集只交付一次阵列测量；滤波由随后独立调用的 Estimate 执行。
+				// Assign the raw pressures to `data_pressure_raw`, then compute and assign the processed values to `data_pressure`.
+        // 把原始压强赋值给data_pressure_raw，计算后给data_pressure赋值
+        for (int i = 0; i < SENSOR_NUM; ++i)
+        {
+            data_pressure_raw[i] = pressure[i];
+            tmp_pres = data_pressure_raw[i] - data_pressure_offset[i];
+            tmp_pres = Pressure_Kf[i].update(tmp_pres); // First-order low-pass filtering. // 一阶低通滤波
+            data_pressure[i] = tmp_pres;
+        }
+#if LC_IMU_ASYNC_ENABLED
+        // Publish the same completed legacy frame to the RTOS/ESKF adapter.  The
+        // legacy value above remains the control/display source; Pa is only a
+        // parallel observation for the estimator and is calculated from the same
+        // D1/D2 samples without another sensor transaction.
+        lower_controller::PressureMeasurement sample = {};
+        sample.sequence = last_measurement_.sequence + 1U;
+        sample.read_completed_ms = HAL_GetTick();
+        lower_controller::PressureArraySample physical = {};
+        physical.stamp.sequence = physical_sample_.stamp.sequence + 1U;
+        physical.stamp.received_us = LcTime_NowUs();
+        physical.stamp.sample_us = physical.stamp.received_us;
+        physical.calibration_epoch = calibration_epoch_;
+        for (unsigned i = 0; i < SENSOR_NUM; ++i)
+        {
+            sample.pressure_legacy[i] = data_pressure_raw[i];
+            sample.prom_valid_mask |= uint8_t(flag_ok[i] ? 1U << i : 0U);
+            physical.channel_sample_us[i] = physical.stamp.sample_us;
+            if (flag_ok[i])
+            {
+                // The legacy formula above returns the old hPa-like value.
+                // Keep the adapter numerically consistent with that value rather
+                // than applying the newer model-specific compensation a second time.
+                physical.pressure_pa[i] = data_pressure_raw[i] * 100.0f;
+                physical.valid_mask |= uint8_t(1U << i);
+            }
+        }
         last_measurement_ = sample;
+        physical_sample_ = physical;
+        legacy_frame_valid_ = sample.prom_valid_mask == 0x0f;
+#endif
         ps_state = PS_HANDLE_STATE::GET_TEMPERATURE;
         break;
     }

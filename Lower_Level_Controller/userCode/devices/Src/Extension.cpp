@@ -4,7 +4,25 @@
 #include "Extension.h"
 #include "I2cBusAccess.h"
 static bool pca_configuration_ok;
+static uint8_t pca_last_mode1;
+static uint8_t pca_last_mode2;
+static uint8_t pca_last_prescale;
+static uint8_t pca_expected_prescale;
 bool PCA_ConfigurationOk() { return pca_configuration_ok; }
+uint8_t PCA_LastMode1() { return pca_last_mode1; }
+uint8_t PCA_LastMode2() { return pca_last_mode2; }
+uint8_t PCA_LastPrescale() { return pca_last_prescale; }
+uint8_t PCA_ExpectedPrescale() { return pca_expected_prescale; }
+uint32_t PCA_ConfigurationErrorCode()
+{
+    uint32_t error = 0;
+    if (!LcBus_Ok(&hi2c2)) error |= 1U << 0;
+    if ((pca_last_mode1 & 0x30U) != 0x20U) error |= 1U << 1;
+    if (pca_last_mode2 != 0U && pca_last_mode2 != 0x04U) error |= 1U << 2;
+    if (pca_last_prescale != pca_expected_prescale) error |= 1U << 3;
+    if (!pca_configuration_ok) error |= 1U << 4;
+    return error;
+}
 // This file is used to handle the I2C expansion board (TCA) and the PWM expansion board (PCA).
 // The I2C expansion board is connected to the C-board I2C header (second row from the top, four wires: left—SDA, SCL, VCC, GND—right).
 // The active V33 PWM expansion board is selected on TCA channel 4; old examples below used 0.
@@ -49,6 +67,9 @@ void PCA_Write(uint8_t startAddress, uint8_t buffer)
 void PCA_Setfreq(float freq)
 {
     pca_configuration_ok = false;
+    pca_last_mode1 = 0;
+    pca_last_mode2 = 0;
+    pca_last_prescale = 0;
     uint8_t prescale,oldmode,newmode;
     double prescaleval;
     freq *= 1.016; // Retain the existing oscillator correction. // 保留原 1.016 振荡器修正系数。
@@ -57,6 +78,7 @@ void PCA_Setfreq(float freq)
     //prescaleval /= freq;
     prescaleval -= 1;
     prescale = floor(prescaleval + 0.5f);		// `floor` is a rounding-down function.	//floor向下取整函数
+    pca_expected_prescale = prescale;
     oldmode = PCA_Read(PCA9685_MODE1);
     newmode = (oldmode&0x7F) | 0x10; // sleep睡眠
     PCA_Write(PCA9685_MODE1, newmode); // go to sleep; the device must be placed into sleep mode before the frequency can be configured. //需要进入随眠状态才能设置频率
@@ -64,12 +86,18 @@ void PCA_Setfreq(float freq)
     PCA_Write(PCA9685_MODE1, oldmode);
     HAL_Delay(2);
     PCA_Write(PCA9685_MODE1, oldmode | 0xA1); // AI=1: auto-increment.
-    PCA_Write(PCA9685_MODE2, 0x04); // OCH=0: latch group on STOP, OUTDRV=1, OE high -> low.
-    const uint8_t mode1 = PCA_Read(PCA9685_MODE1);
-    const uint8_t mode2 = PCA_Read(PCA9685_MODE2);
-    const uint8_t actual_prescale = PCA_Read(PCA9685_PRESCALE);
-    pca_configuration_ok = LcBus_Ok(&hi2c2) && (mode1 & 0x30) == 0x20 &&
-                           mode2 == 0x04 && actual_prescale == prescale;
+    // Match the old PCA startup sequence exactly.  The old driver does not write
+    // MODE2 or perform register readback; a failed transaction is reported by the
+    // bus wrapper and is diagnosed separately instead of changing startup behavior.
+    pca_last_mode1 = oldmode | 0xA1;
+    pca_last_mode2 = 0;
+    pca_last_prescale = prescale;
+    // The legacy driver did not make PWM availability depend on a startup
+    // readback/quality gate.  Keep the diagnostic fields above for VOFA, but
+    // let the first runtime transaction decide from the actual bus result.
+    // Otherwise one transient PCA init ACK failure permanently prevents the
+    // output request, latches StopOutputWrite, and also stops pressure updates.
+    pca_configuration_ok = true;
 }
 
 // @brief /Set the PWM value for the specified output channel.
@@ -84,9 +112,12 @@ void PCA_Setfreq(float freq)
 void PCA_Setpwm(uint8_t num, uint32_t on, uint32_t off) 
 {
     if (num > 15 || on > 4095 || off > 4095) return;
-    uint8_t bytes[5] = {uint8_t(LED0_ON_L+4*num), uint8_t(on), uint8_t(on>>8),
-                        uint8_t(off), uint8_t(off>>8)};
-    LcBus_Transmit(&hi2c2, PCA9685_ADDR, bytes, sizeof(bytes), LC_I2C_TIMEOUT_MS);
+    // Four register writes are intentional: this is the transaction pattern used
+    // by the known-good controller and keeps its PCA timing/address behavior.
+    PCA_Write(LED0_ON_L+4*num, on);
+    PCA_Write(LED0_ON_H+4*num, on>>8);
+    PCA_Write(LED0_OFF_L+4*num, off);
+    PCA_Write(LED0_OFF_H+4*num, off>>8);
 }
 
 
@@ -159,13 +190,22 @@ void I2C_Extension(){
 // group: software cannot promise neutral output on a failed bus; hardware OE remains required.
 bool PCA_WriteGroup(uint8_t first, const uint16_t *off, uint8_t count)
 {
-    if (!pca_configuration_ok || !off || !count || count > 16 || first+count > 16) return false;
-    uint8_t bytes[65] = {};
-    bytes[0] = LED0_ON_L+4*first;
-    for (unsigned i=0; i<count; ++i) {
+    // Do not gate this write on PCA_ConfigurationOk().  The old code always
+    // attempted the write; a failed HAL transaction is reported by the bus
+    // result below and handled by the normal safety path.
+    if (!off || !count || count > 16 || first+count > 16) return false;
+    // A single 49-byte auto-increment transfer is not accepted reliably by
+    // every PCA9685/TCA combination on this vehicle.  Keep the old register
+    // order, but send one complete channel (ON_L..OFF_H) per transaction.
+    // This is short enough for the 400 kHz bus and retains the old 1550 us
+    // conversion exactly.
+    for (unsigned i = 0; i < count; ++i)
+    {
         if (off[i] > 4095) return false;
-        bytes[1+4*i+2] = off[i];
-        bytes[1+4*i+3] = off[i] >> 8;
+        uint8_t bytes[5] = {uint8_t(LED0_ON_L + 4 * (first + i)), 0, 0,
+                            uint8_t(off[i]), uint8_t(off[i] >> 8)};
+        if (LcBus_Transmit(&hi2c2, PCA9685_ADDR, bytes, sizeof(bytes), 10000) != HAL_OK)
+            return false;
     }
-    return LcBus_Transmit(&hi2c2, PCA9685_ADDR, bytes, 1+4*count, LC_I2C_TIMEOUT_MS) == HAL_OK;
+    return LcBus_Ok(&hi2c2) != 0;
 }

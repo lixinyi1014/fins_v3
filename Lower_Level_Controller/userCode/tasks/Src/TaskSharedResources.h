@@ -37,6 +37,22 @@ extern StaticQueue<PressureArraySample, 4> pressure_fusion_samples;
 extern FusionState latest_fusion_state; // 由 IMU 任务写，调试器查看；控制使用队列中的一致副本。
 extern FusionDiagnostics fusion_diagnostics;
 extern ImuAcquisitionDiagnostics imu_acquisition_diagnostics;
+// Why ImuFusionTask marked attitude frames invalid (EDIAG command). 帧无效原因计数。
+struct ImuFrameDiagnostics
+{
+    uint32_t published, valid, discontinuous, no_gyro, no_accel, gyro_stale, accel_stale, bad_flags;
+    uint32_t gyro_packets, accel_packets, mag_packets, temperature_packets;
+    uint32_t last_gyro_age_us, last_accel_age_us, last_flags;
+    uint32_t load_permille; // ImuFusionTask 自身 CPU 占用(千分比，含期间中断)，每秒更新
+};
+extern volatile ImuFrameDiagnostics imu_frame_diagnostics;
+// 各环节最长耗时(us)，EDIAG 读取后清零。控制任务：水压请求/等姿态/PWM 请求；总线任务：实际处理时间。
+struct TimingDiagnostics
+{
+    uint32_t pressure_submit_max, imu_wait_max, output_submit_max, cycle_max;
+    uint32_t bus_pressure_max, bus_output_max;
+};
+extern volatile TimingDiagnostics timing_diagnostics;
 bool PublishImuPacket(const RawImuPacket &packet, bool from_isr);
 #endif
 extern SemaphoreHandle_t imu_dma_done;

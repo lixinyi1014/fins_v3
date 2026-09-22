@@ -10,6 +10,34 @@ namespace lower_controller
 {
 namespace tasks
 {
+namespace
+{
+/* PCA9685 自己保持各通道寄存器，不需要每个 150 Hz 周期把 12 路原样重写一遍。
+ * 原先每周期逐通道写 12 次（约 3~4 ms），加上水压一步（约 3 ms）超过 6.67 ms 控制周期，
+ * 频繁触发 StopDeadline，解锁后推进器会被反复打停。这里只写有变化的通道；
+ * 每 kPwmRefreshCycles 个周期、或 I2C2 出过错后，全量重写一次，保证芯片内容与影子一致。 */
+constexpr uint32_t kPwmRefreshCycles = 30; // 150 Hz / 30 = 5 Hz 全量刷新
+uint16_t pwm_shadow[12];
+bool pwm_shadow_valid = false;
+uint32_t pwm_cycles_since_refresh = 0, pwm_last_bus_errors = 0;
+/** 写 mask 中标记的通道；成功后更新影子，失败则作废影子以强制下次全量重写。 */
+bool WritePwmChannels(const uint16_t counts[12], uint16_t mask)
+{
+    if (!mask) return true;
+    TCA_SetChannel(LC_PWM_MUX_CHANNEL); // 4；选通与写入属于同一个总线请求
+    for (unsigned i = 0; i < 12; ++i)
+    {
+        if (!(mask & (1U << i))) continue;
+        if (!PCA_WriteGroup(i, &counts[i], 1) || !LcBus_Ok(&hi2c2))
+        {
+            pwm_shadow_valid = false;
+            return false;
+        }
+        pwm_shadow[i] = counts[i];
+    }
+    return true;
+}
+} // namespace
 
 PressurePwmReply ProcessPressurePwmRequest(const PressurePwmRequest &request,
                                            PressurePublication &publication)
@@ -17,7 +45,7 @@ PressurePwmReply ProcessPressurePwmRequest(const PressurePwmRequest &request,
     PressurePwmReply reply = {};
     LcBus_Begin(&hi2c2, request.operation == PressurePwmOperation::Calibrate
                             ? LC_CALIBRATION_BUDGET_US
-                            : LC_BUS_BUDGET_US); // 8 s 校准 / 5000 us 普通请求
+                            : LC_BUS_BUDGET_US); // 8 s 校准 / 当前配置的整组压力事务预算
     if (request.operation == PressurePwmOperation::Pressure)
     {
         PressureSensor::pressure_sensor.Handle(); // 总线任务内先 Acquire 再 Estimate；一帧只滤波一次
@@ -57,7 +85,6 @@ PressurePwmReply ProcessPressurePwmRequest(const PressurePwmRequest &request,
     }
     else
     {
-        TCA_SetChannel(LC_PWM_MUX_CHANNEL); // 4；选通与整组读写属于同一个总线请求
         if (request.allow_motion && LcTime_NowUs()-request.released_us >= 1000000U/LC_CONTROL_HZ)
             LatchOutputStop(StopDeadline);
         const bool stopped = !request.allow_motion || LcRuntime_OutputsStopped(request.epoch);
@@ -78,7 +105,19 @@ PressurePwmReply ProcessPressurePwmRequest(const PressurePwmRequest &request,
             servo_mask |= 1U<<channel;
             counts[channel] = pulse * LC_PWM_COUNTS / LC_PWM_PERIOD_US; // Preserve servo integer conversion.
         }
-        if (!PCA_WriteGroup(0, counts, 12)) return reply;
+        const uint32_t bus_errors = LcBus_ErrorCount(&hi2c2);
+        const bool refresh = !pwm_shadow_valid || bus_errors != pwm_last_bus_errors ||
+                             ++pwm_cycles_since_refresh >= kPwmRefreshCycles;
+        uint16_t dirty = 0;
+        for (unsigned i = 0; i < 12; ++i)
+            if (refresh || counts[i] != pwm_shadow[i]) dirty |= uint16_t(1U << i);
+        if (!WritePwmChannels(counts, dirty)) return reply;
+        if (refresh)
+        {
+            pwm_shadow_valid = true;
+            pwm_cycles_since_refresh = 0;
+            pwm_last_bus_errors = bus_errors;
+        }
         if (request.allow_motion && LcTime_NowUs()-request.released_us >= 1000000U/LC_CONTROL_HZ)
             LatchOutputStop(StopDeadline);
         // OFF can interrupt the HAL transfer. On completion recheck and immediately replace
@@ -86,7 +125,7 @@ PressurePwmReply ProcessPressurePwmRequest(const PressurePwmRequest &request,
         if (!all_neutral && LcRuntime_OutputsStopped(request.epoch)) {
             for (unsigned i=0; i<LC_THRUSTER_COUNT; ++i)
                 counts[i] = LegacyThrusterPwmCount(LC_THRUSTER_NEUTRAL_US);
-            if (!PCA_WriteGroup(0, counts, LC_THRUSTER_COUNT)) return reply;
+            if (!WritePwmChannels(counts, uint16_t((1U << LC_THRUSTER_COUNT) - 1U))) return reply;
             all_neutral = true;
         }
         if (all_neutral && LcBus_Ok(&hi2c2)) neutral_pwm_ready = 1;
@@ -113,7 +152,13 @@ void PressurePwmTask(void *)
         PressurePwmRequest request;
         configASSERT(xQueueReceive(pressure_pwm_requests.handle, &request, portMAX_DELAY) ==
                      pdPASS); // 无请求时阻塞；每次取出独立的请求副本
+        const uint32_t started = LcTime_NowUs();
         PressurePwmReply reply = ProcessPressurePwmRequest(request, publication);
+        const uint32_t took = LcTime_NowUs() - started;
+        volatile uint32_t &slot = request.operation == PressurePwmOperation::Output
+                                      ? timing_diagnostics.bus_output_max
+                                      : timing_diagnostics.bus_pressure_max;
+        if (took > slot) slot = took; // 总线任务实际处理耗时(含被抢占时间)
         xQueueSend(pressure_pwm_replies.handle, &reply, portMAX_DELAY);
         controller_task_diagnostics.i2c2_errors = LcBus_ErrorCount(&hi2c2);
         controller_task_diagnostics.pressure_pwm_stack_free = uxTaskGetStackHighWaterMark(NULL);

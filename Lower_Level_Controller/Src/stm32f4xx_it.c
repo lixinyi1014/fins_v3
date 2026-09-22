@@ -119,6 +119,13 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
   /* USER CODE BEGIN HardFault_IRQn 0 */
+  /* 先取 EXC_RETURN（进入异常时 LR 的值），再交给串口上报；该函数不返回。 */
+  {
+    extern void LcCrash_HardFault(uint32_t exc_return);
+    uint32_t exc_return;
+    __asm volatile ("mov %0, lr" : "=r" (exc_return));
+    LcCrash_HardFault(exc_return);
+  }
 
   /* USER CODE END HardFault_IRQn 0 */
   while (1)

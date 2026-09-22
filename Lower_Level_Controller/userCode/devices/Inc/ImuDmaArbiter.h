@@ -7,6 +7,9 @@ namespace lower_controller
 struct ImuAcquisitionDiagnostics
 {
     uint32_t edges[4], pending_overwrites, expired, ambiguous, dma_errors, queue_drops;
+    // fe_seen: 直接模式下出现但被忽略的 FIFO 错误标志次数（良性，不再中止传输）。
+    // last_error_bits: 最近一次真正中止时的标志 bit0 RX_TE,1 RX_DME,2 RX_FE,3 TX_TE,4 TX_DME,5 TX_FE。
+    uint32_t fe_seen, last_error_bits;
 };
 
 /* 单一 SPI 的仲裁状态，不访问 HAL 或 RTOS，便于用相同代码验证中断交错。

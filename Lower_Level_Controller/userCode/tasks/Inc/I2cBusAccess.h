@@ -10,6 +10,7 @@ extern "C"
     void LcBus_Begin(I2C_HandleTypeDef *bus, uint32_t budget_us);
     int LcBus_Ok(I2C_HandleTypeDef *bus);
     uint32_t LcBus_ErrorCount(I2C_HandleTypeDef *bus);
+    uint32_t LcBus_RecoveryCount(I2C_HandleTypeDef *bus); // 出错后执行的总线恢复次数
     HAL_StatusTypeDef LcBus_Transmit(I2C_HandleTypeDef *, uint16_t, uint8_t *, uint16_t, uint32_t);
     HAL_StatusTypeDef LcBus_Receive(I2C_HandleTypeDef *, uint16_t, uint8_t *, uint16_t, uint32_t);
     HAL_StatusTypeDef LcBus_MemRead(I2C_HandleTypeDef *, uint16_t, uint16_t, uint16_t, uint8_t *, uint16_t,

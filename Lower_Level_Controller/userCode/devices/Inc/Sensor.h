@@ -91,6 +91,8 @@ class PressureSensor: public  Device{
 #endif
     void FilterMeasurement(const lower_controller::PressureMeasurement& sample);
     lower_controller::PressureMeasurement last_measurement_ = {};
+    bool frame_bus_ok_ = true;      // 当前三步水压帧期间 I2C2 是否全部成功
+    uint32_t bus_frame_drops_ = 0;  // 因 I2C2 出错被丢弃的整帧数
     uint32_t estimated_sequence_ = 0;
     uint32_t conversion_started_us_ = 0;
     lower_controller::LegacyPressureFeedback feedback_ = {};
@@ -148,6 +150,7 @@ public:
     bool LegacyFrameValid() const { return legacy_frame_valid_; }
     void ResetTimedAcquisition() { ps_state = PS_HANDLE_STATE::GET_TEMPERATURE; acquisition_mask_ = 0; legacy_frame_valid_ = false; ++calibration_epoch_; }
 #endif
+    uint32_t BusFrameDrops() const { return bus_frame_drops_; }
     bool PromValid() const { for (int i = 0; i < SENSOR_NUM; ++i) if (!flag_ok[i]) return false; return true; }
     void Estimate(const lower_controller::PressureMeasurement& sample, bool outer_loop_due);
     const lower_controller::LegacyPressureFeedback& Feedback() const { return feedback_; }

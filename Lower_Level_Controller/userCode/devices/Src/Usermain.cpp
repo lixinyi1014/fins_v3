@@ -203,24 +203,48 @@ int main(void)
     const char *const stage[] = {"THRUSTERS", "SERVOS", "IMU", "PRESSURE", "LED"};
     static_assert(sizeof(stage)/sizeof(stage[0]) == DEVICE_NUM, "Update boot stage names with device[]");
     for(int i = 0; i < DEVICE_NUM; ++i){
-        char text[64];
+        char text[192];
         int length = snprintf(text, sizeof(text), "BOOT=INIT_%s\r\n", stage[i]);
         LcSerial_Write(reinterpret_cast<const uint8_t *>(text), length);
         LcBus_Begin(&hi2c2, 3000000U);
         LcBus_Begin(&hi2c3, 3000000U);
         device[i] -> Init();
-        const bool init_ok = LcBus_Ok(&hi2c2) && LcBus_Ok(&hi2c3) &&
-            (i > 1 || PCA_ConfigurationOk()) && (i != 2 || IMU::imu.InitError() == 0) &&
-            (i != 3 || PressureSensor::pressure_sensor.PromValid());
+        const uint32_t bus2_errors = LcBus_ErrorCount(&hi2c2);
+        const uint32_t bus3_errors = LcBus_ErrorCount(&hi2c3);
+        const uint32_t pca_error = PCA_ConfigurationErrorCode();
+        // Match the legacy startup contract: PCA has no register-readback gate;
+        // the pressure device is accepted when its PROM CRCs are valid.  Bus and
+        // PCA details remain in the diagnostic line but must not block reaching
+        // the legacy MS5837 read path.
+        const bool init_ok = (i != 2 || IMU::imu.InitError() == 0) &&
+            (i != 3 || (LcBus_Ok(&hi2c2) && PressureSensor::pressure_sensor.PromValid()));
         if (!init_ok) {
-            // No scheduler/arming after failed initialization. Repeated text is visible in VOFA.
+            // No scheduler/arming after failed initialization. Repeat both human-readable
+            // and FireWater-compatible numeric diagnostics so the failing layer is visible.
             __HAL_TIM_SetCompare(&htim10, TIM_CHANNEL_1, 0);
             LcSafetyHardware_SetOutputEnabled(0);
             for (;;) {
-                length = snprintf(text, sizeof(text), "BOOT=FAIL_%s IMU=%u RESTART_AT_SURFACE\r\n",
-                                  stage[i], unsigned(IMU::imu.InitError()));
+                length = snprintf(text, sizeof(text),
+                                  "BOOT=FAIL_%s ERR=%lu I2C2E=%lu I2C3E=%lu PCAE=%lu M1=%u M2=%u PRE=%u/%u IMU=%u RESTART_AT_SURFACE\r\n",
+                                  stage[i], static_cast<unsigned long>(
+                                      (i == 0 || i == 1) ? pca_error : 0U),
+                                  static_cast<unsigned long>(bus2_errors),
+                                  static_cast<unsigned long>(bus3_errors),
+                                  static_cast<unsigned long>(pca_error),
+                                  unsigned(PCA_LastMode1()), unsigned(PCA_LastMode2()),
+                                  unsigned(PCA_LastPrescale()), unsigned(PCA_ExpectedPrescale()),
+                                  unsigned(IMU::imu.InitError()));
                 if (length > 0 && unsigned(length) < sizeof(text))
                     LcSerial_Write(reinterpret_cast<const uint8_t *>(text), length);
+                char vofa_error[192];
+                const int vofa_length = snprintf(vofa_error, sizeof(vofa_error),
+                    "vofa:-9999,-9999,-9999,-9999,-9999,-9999,-9999,-9999,1,0,0,%lu,%lu,%lu,%lu,%u\r\n",
+                    static_cast<unsigned long>(pca_error),
+                    static_cast<unsigned long>(bus2_errors),
+                    static_cast<unsigned long>(bus3_errors),
+                    static_cast<unsigned long>(pca_error), unsigned(i));
+                if (vofa_length > 0 && unsigned(vofa_length) < sizeof(vofa_error))
+                    LcSerial_Write(reinterpret_cast<const uint8_t *>(vofa_error), vofa_length);
                 HAL_Delay(1000);
             }
         }

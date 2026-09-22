@@ -1,4 +1,12 @@
 #include "Sensor.h"
+
+/*
+ * Disabled deliberately.  This was the newer timed/acquire path that added
+ * freshness and validity gating.  The active firmware uses the old
+ * PressureSensor::Handle_all() state machine verbatim so read timing, checks,
+ * and units remain identical to the known-good controller.
+ */
+#if 0
 #if LC_IMU_ASYNC_ENABLED
 #include "PressureCompensation.h"
 #include "ControllerRtosHooks.h"
@@ -132,3 +140,4 @@ void PressureSensor::AcquireTimedPressure()
     ps_state = PS_HANDLE_STATE::GET_TEMPERATURE;
 }
 #endif
+#endif // 0: legacy Handle_all() is the active pressure acquisition path

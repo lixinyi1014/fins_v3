@@ -5,6 +5,7 @@
 #include "FusedController.h"
 #include "FusionConfiguration.h"
 #include "VofaTelemetry.h"
+#include "I2cBusAccess.h"
 #include <stdio.h>
 
 // 控制周期协调：处理命令 → 请求水压 → 等姿态 → 计算控制量 → 等待 PWM 写出。
@@ -13,10 +14,19 @@ namespace lower_controller
 {
 namespace tasks
 {
+volatile TimingDiagnostics timing_diagnostics = {};
 #if LC_IMU_ASYNC_ENABLED
 namespace
 {
+inline void RecordMax(volatile uint32_t &slot, uint32_t value)
+{
+    if (value > slot) slot = value;
+}
 FusedController fused_controller(GetFusedControlConfiguration());
+// EDIAG: which READY condition failed on the latest cycle (bit set = failed).
+// bit0 CAL, bit1 FAULT, bit2 HEATER, bit3 PRESSURE_BUS, bit4 IMU_TIMEOUT, bit5 IMU_INVALID, bit6 NOT_USABLE
+uint32_t not_ready_mask = 0;
+uint32_t imu_wait_timeouts = 0, imu_frame_invalid = 0;
 bool vofa_logging = true; // 上电默认显示；停止/未就绪时也输出，便于排查故障。
 void LogVofaState(const FusionState &state, bool frame_valid, const PressureArraySample &pressure,
                   uint32_t now, bool ready)
@@ -26,9 +36,15 @@ void LogVofaState(const FusionState &state, bool frame_valid, const PressureArra
     if (!vofa_logging || now - previous_us < LC_VOFA_PERIOD_US) return;
     previous_us = now;
     char packet[LC_UART_TX_PACKET_SIZE];
-    const int length = FormatVofaTelemetry(packet, sizeof(packet), state, frame_valid, pressure, now,
+    const uint32_t diagnostic_code =
+        (controller_task_diagnostics.last_stop_reason & 0xffU) |
+        ((controller_task_diagnostics.i2c2_errors & 0xffU) << 8) |
+        (state.flags << 16);
+    const int length = FormatVofaTelemetry(packet, sizeof(packet), state, frame_valid, pressure,
+        PressureSensor::pressure_sensor.data_pressure,
+        PressureSensor::pressure_sensor.LegacyFrameValid(), now,
         outputs_stopped != 0, ready && !safety_fault_latched, PressureSensor::pressure_sensor.StartupCalibrationOk(),
-        safety_fault_latched != 0, ++sequence);
+        safety_fault_latched != 0, diagnostic_code, ++sequence);
     if (length) LcSerial_Write(reinterpret_cast<const uint8_t *>(packet), length);
 }
 bool PacketEquals(const char *text, const char *command)
@@ -143,6 +159,72 @@ bool DispatchReceivedCommands(bool &arm_requested, uint32_t &arm_epoch)
                 (unsigned long)controller_task_diagnostics.last_stop_reason);
             if (length > 0 && unsigned(length) < sizeof(status))
                 LcSerial_Write(reinterpret_cast<const uint8_t *>(status), length);
+            continue;
+        }
+        if (PacketEquals(packet.data, "EDIAG"))
+        {
+            // Five short lines (each well under LC_UART_TX_PACKET_SIZE even with 10-digit values):
+            // why READY fails, why IMU frames are rejected, IMU acquisition, ESKF updates.
+            const FusionDiagnostics fd = fusion_diagnostics;
+            const ImuAcquisitionDiagnostics ad = imu_acquisition_diagnostics;
+            const auto &fr = imu_frame_diagnostics;
+            char line[LC_UART_TX_PACKET_SIZE];
+            int n;
+            auto send = [&]() {
+                if (n > 0 && unsigned(n) < sizeof(line))
+                    LcSerial_Write(reinterpret_cast<const uint8_t *>(line), n);
+            };
+            n = snprintf(line, sizeof(line), "EDIAG1=NR=%lu,WAIT_TO=%lu,INV=%lu,LF=%lu,F=%lu,T=%.1f,HEAT=%u,FE=%lu,EB=%lu\r\n",
+                (unsigned long)not_ready_mask, (unsigned long)imu_wait_timeouts, (unsigned long)imu_frame_invalid,
+                (unsigned long)fr.last_flags, (unsigned long)latest_fusion_state.flags,
+                double(IMU::imu.pro_data.temp), unsigned(IMU::imu.HeaterFault()),
+                (unsigned long)ad.fe_seen, (unsigned long)ad.last_error_bits);
+            send();
+            n = snprintf(line, sizeof(line),
+                "EDIAG2=PUB=%lu,OK=%lu,DISC=%lu,NOG=%lu,NOA=%lu,GST=%lu,AST=%lu,BADF=%lu,GAGE=%lu,AAGE=%lu\r\n",
+                (unsigned long)fr.published, (unsigned long)fr.valid, (unsigned long)fr.discontinuous,
+                (unsigned long)fr.no_gyro, (unsigned long)fr.no_accel, (unsigned long)fr.gyro_stale,
+                (unsigned long)fr.accel_stale, (unsigned long)fr.bad_flags, (unsigned long)fr.last_gyro_age_us,
+                (unsigned long)fr.last_accel_age_us);
+            send();
+            n = snprintf(line, sizeof(line),
+                "EDIAG3=PKT=%lu/%lu/%lu/%lu,EDGE=%lu/%lu/%lu/%lu,EXP=%lu,OVW=%lu,AMB=%lu,DMAE=%lu,QDROP=%lu\r\n",
+                (unsigned long)fr.gyro_packets, (unsigned long)fr.accel_packets, (unsigned long)fr.mag_packets,
+                (unsigned long)fr.temperature_packets, (unsigned long)ad.edges[0], (unsigned long)ad.edges[1],
+                (unsigned long)ad.edges[2], (unsigned long)ad.edges[3], (unsigned long)ad.expired,
+                (unsigned long)ad.pending_overwrites, (unsigned long)ad.ambiguous, (unsigned long)ad.dma_errors,
+                (unsigned long)ad.queue_drops);
+            send();
+            n = snprintf(line, sizeof(line),
+                "EDIAG4=PRED=%lu,AU=%lu,AR=%lu,ANIS=%.2f,MU=%lu,MR=%lu,GAP=%lu,NUM=%lu\r\n",
+                (unsigned long)fd.predictions, (unsigned long)fd.accel_updates, (unsigned long)fd.accel_rejected,
+                double(fd.last_accel_nis), (unsigned long)fd.mag_updates, (unsigned long)fd.mag_rejected,
+                (unsigned long)fd.gyro_gaps, (unsigned long)fd.numerical_failures);
+            send();
+            n = snprintf(line, sizeof(line),
+                "EDIAG5=PU=%lu,PR=%lu,PCR=%lu,CFGR=%lu,LATE=%lu,DUP=%lu,OVF=%lu,PDROP=%lu\r\n",
+                (unsigned long)fd.pressure_updates, (unsigned long)fd.pressure_rejected,
+                (unsigned long)fd.pressure_channel_rejected, (unsigned long)fd.configuration_rejections,
+                (unsigned long)fd.late_observations, (unsigned long)fd.duplicate_observations,
+                (unsigned long)fd.event_overflows, (unsigned long)controller_task_diagnostics.pressure_sample_drops);
+            send();
+            // 各环节最长耗时(us)，读取后清零，便于连续两次 EDIAG 看最近一段时间。
+            n = snprintf(line, sizeof(line),
+                "EDIAG6=LOAD=%lu,P_SUB=%lu,IMU_WAIT=%lu,O_SUB=%lu,CYCLE=%lu,BUS_P=%lu,BUS_O=%lu,MISS=%lu\r\n",
+                (unsigned long)fr.load_permille, (unsigned long)timing_diagnostics.pressure_submit_max,
+                (unsigned long)timing_diagnostics.imu_wait_max, (unsigned long)timing_diagnostics.output_submit_max,
+                (unsigned long)timing_diagnostics.cycle_max, (unsigned long)timing_diagnostics.bus_pressure_max,
+                (unsigned long)timing_diagnostics.bus_output_max,
+                (unsigned long)controller_task_diagnostics.deadline_misses);
+            send();
+            n = snprintf(line, sizeof(line), "EDIAG7=I2C2_ERR=%lu,I2C2_REC=%lu,I2C3_ERR=%lu,I2C3_REC=%lu,P_FRAME_DROP=%lu\r\n",
+                (unsigned long)LcBus_ErrorCount(&hi2c2), (unsigned long)LcBus_RecoveryCount(&hi2c2),
+                (unsigned long)LcBus_ErrorCount(&hi2c3), (unsigned long)LcBus_RecoveryCount(&hi2c3),
+                (unsigned long)PressureSensor::pressure_sensor.BusFrameDrops());
+            send();
+            timing_diagnostics.pressure_submit_max = timing_diagnostics.imu_wait_max = 0;
+            timing_diagnostics.output_submit_max = timing_diagnostics.cycle_max = 0;
+            timing_diagnostics.bus_pressure_max = timing_diagnostics.bus_output_max = 0;
             continue;
         }
         if (PacketEquals(packet.data, "STAT"))
@@ -274,18 +356,40 @@ void ControlLoopTask(void *)
 
         PressurePwmRequest pressure_request = {};
         pressure_request.operation = PressurePwmOperation::Pressure;
+        const uint32_t t_pressure = LcTime_NowUs();
         const PressurePwmReply pressure = SubmitPressurePwmRequest(
             pressure_request); // 推进一个水压步骤并取得回复；正常三步一帧，名义 50 Hz
+        const uint32_t t_imu = LcTime_NowUs();
         ImuAttitudeFrame imu = {};
         bool imu_ok =
             WaitForImuAttitude(release, imu); // 等待与当前释放序号匹配的姿态结果，最多 8 个 1 ms tick
         uint32_t now = LcTime_NowUs();
 #if LC_IMU_ASYNC_ENABLED
-        thrusters->fused_feedback = imu.fusion;
+        RecordMax(timing_diagnostics.pressure_submit_max, t_imu - t_pressure);
+        RecordMax(timing_diagnostics.imu_wait_max, now - t_imu);
+#endif
+#if LC_IMU_ASYNC_ENABLED
+        // Keep the latest estimator snapshot for diagnostics when the release
+        // queue misses its 8 ms deadline.  `imu_ok` still gates control and
+        // telemetry freshness, so this does not make a stale frame usable.
+        const FusionState feedback = imu_ok ? imu.fusion : latest_fusion_state;
+        thrusters->fused_feedback = feedback;
         const bool ready = PressureSensor::pressure_sensor.StartupCalibrationOk() &&
             !safety_fault_latched && !IMU::imu.HeaterFault() && pressure.ok && imu_ok &&
-            FusedStateUsable(imu.fusion, now, thrusters->BuildFusedControlRequest().yaw_enabled);
+            FusedStateUsable(feedback, now, thrusters->BuildFusedControlRequest().yaw_enabled);
         const bool feedback_failed = !ready;
+        {
+            // No frame for this release within 8 ms = timeout; a matching but invalid frame = rejected.
+            const bool imu_timeout = !imu_ok && !SequenceAtOrAfter(imu.release.sequence, release.sequence);
+            if (imu_timeout) ++imu_wait_timeouts;
+            else if (!imu_ok) ++imu_frame_invalid;
+            not_ready_mask =
+                (PressureSensor::pressure_sensor.StartupCalibrationOk() ? 0U : 1U << 0) |
+                (safety_fault_latched ? 1U << 1 : 0U) | (IMU::imu.HeaterFault() ? 1U << 2 : 0U) |
+                (pressure.ok ? 0U : 1U << 3) | (imu_timeout ? 1U << 4 : 0U) |
+                (!imu_ok && !imu_timeout ? 1U << 5 : 0U) |
+                (FusedStateUsable(feedback, now, thrusters->BuildFusedControlRequest().yaw_enabled) ? 0U : 1U << 6);
+        }
 #else
         const bool ready = false; // 新固件要求 DRDY/ESKF，不允许落入旧控制路径。
         const bool feedback_failed = true;
@@ -314,7 +418,7 @@ void ControlLoopTask(void *)
                 output.allow_motion = true;
                 output.released_us = release.released_us;
 #if LC_IMU_ASYNC_ENABLED
-                const auto result = fused_controller.Compute(imu.fusion, thrusters->BuildFusedControlRequest(), now);
+                const auto result = fused_controller.Compute(feedback, thrusters->BuildFusedControlRequest(), now);
                 if (result.valid) output.thrusters = result.command;
                 else
                 {
@@ -331,8 +435,17 @@ void ControlLoopTask(void *)
             fused_controller.Reset(); // OFF、超时、传感器失效后清积分；恢复时不携带旧环路记忆。
 #endif
         }
-        if (!SubmitPressurePwmRequest(output).ok)
-            FatalStop(StopOutputWrite); // 输出写失败：禁止重启输出、不再喂狗；OE 接线后立即禁止 PWM。
+        const uint32_t t_output = LcTime_NowUs();
+        const bool output_ok = SubmitPressurePwmRequest(output).ok;
+#if LC_IMU_ASYNC_ENABLED
+        RecordMax(timing_diagnostics.output_submit_max, LcTime_NowUs() - t_output);
+#endif
+        if (!output_ok)
+            // Keep pressure sampling alive when a PCA output transaction has
+            // one transient failure.  The output remains stopped and the
+            // reason is reported in VOFA ERROR_CODE; a fatal latch here would
+            // freeze the last pressure frame as well.
+            LatchOutputStop(StopOutputWrite);
         status_led->Handle();
         ++controller_task_diagnostics.control_cycles;
         uint32_t elapsed = LcTime_NowUs() - release.released_us;
@@ -344,7 +457,7 @@ void ControlLoopTask(void *)
         }
 #if LC_IMU_ASYNC_ENABLED
         // PWM 写出和期限检查之后再取停止状态；故障时也给出带缺测标记的显示帧。
-        LogVofaState(imu.fusion, imu_ok, pressure.physical_pressure, LcTime_NowUs(), ready);
+        LogVofaState(feedback, imu_ok, pressure.physical_pressure, LcTime_NowUs(), ready);
 #endif
         const uint32_t including_log_us = LcTime_NowUs() - release.released_us;
         if (elapsed < 1000000U / LC_CONTROL_HZ && including_log_us >= 1000000U / LC_CONTROL_HZ)
@@ -354,6 +467,9 @@ void ControlLoopTask(void *)
             ulTaskNotifyTake(pdTRUE, 0);
         }
         elapsed = including_log_us;
+#if LC_IMU_ASYNC_ENABLED
+        RecordMax(timing_diagnostics.cycle_max, elapsed);
+#endif
         controller_task_diagnostics.last_cycle_us = elapsed;
         ControlCycleCompleted(LcTime_NowUs());
         if (elapsed > controller_task_diagnostics.max_cycle_us)

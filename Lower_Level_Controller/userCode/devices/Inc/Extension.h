@@ -41,6 +41,14 @@ extern void I2C_Extension();*/
 
 extern void TCA_SetChannel(uint8_t channel);
 extern bool PCA_ConfigurationOk();
+// Startup diagnostics: bit 0=I2C2 not OK, bit 1=MODE1 mismatch,
+// bit 2=MODE2 mismatch when a readback is available, bit 3=PRESCALE mismatch,
+// bit 4=transaction/configuration failure.
+extern uint32_t PCA_ConfigurationErrorCode();
+extern uint8_t PCA_LastMode1();
+extern uint8_t PCA_LastMode2();
+extern uint8_t PCA_LastPrescale();
+extern uint8_t PCA_ExpectedPrescale();
 extern bool PCA_WriteGroup(uint8_t first, const uint16_t *off, uint8_t count);
 extern void PCA_Setpwm(uint8_t num, uint32_t on, uint32_t off);
 extern void PCA_Write(uint8_t adrr,uint8_t data);

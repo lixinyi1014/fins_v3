@@ -21,22 +21,34 @@
 #define LC_IMU_DMA_TIMEOUT_MS        4U
 #define LC_IMU_RESULT_TIMEOUT_MS     8U
 #define LC_I2C_TIMEOUT_MS            2U
-#define LC_BUS_BUDGET_US             20000U // 四路 TCA + MS5837 访问共用的整组事务预算；5 ms 会稳定丢掉后续通道。
+#define LC_BUS_BUDGET_US             20000U
 #define LC_CALIBRATION_BUDGET_US     8000000U
 #define LC_STATE_MAX_AGE_US          20000U
 #define LC_UART_TX_TIMEOUT_MS        30U
 #define LC_UART_RX_QUEUE_LENGTH      8U
 #define LC_UART_TX_QUEUE_LENGTH      16U
 #define LC_UART_TX_PACKET_SIZE       192U // 一整行 VOFA 数据原子入队，避免分段日志交错。
-#define LC_VOFA_PERIOD_US            20000U // 默认 50 Hz；只影响显示，不改变 150 Hz 控制频率。
+#define LC_VOFA_PERIOD_US            20000U // 旧版水压完成一帧约 50 Hz；只影响显示，不改变 150 Hz 调度。
 
 // 上位机每 100 ms 发 HB；500 ms 未收到新心跳则停止，恢复心跳不会自动启动。
 #define LC_COMMAND_TIMEOUT_US       500000U
 #define LC_TASK_STALL_TIMEOUT_US    100000U
-#define LC_BUS_REPLY_TIMEOUT_MS     40U // 覆盖四路压力一次完整状态步，避免总线任务尚未回复就被控制任务判为故障。
+// 控制任务等待 I2C2 总线任务回复的上限；超时即 FatalStop(StopBusReplyTimeout)，永久锁存。
+// 必须覆盖“整组事务预算 + 预算检查点之后仍可能开始的一笔 HAL 调用(I2cBusAccess 上限 10 ms)”。
+// 曾被改为 10 ms：只要一笔 I2C 事务出错卡满 10 ms 就被判致命，水压停采、四路显示 -9999。
+#define LC_BUS_REPLY_TIMEOUT_MS     40U
+#define LC_I2C_HAL_CALL_MAX_MS      10U // 与 I2cBusAccess.cpp kLongTransactionTimeoutMs 保持一致
+// 单笔 HAL 超时下限。MS5837 读取原先只给 1 ms：总线任务被高优先级 IMU 任务抢占 >1 ms 时，
+// HAL 会在字节传输中途放弃，从机可能一直拉低 SDA，导致 I2C2 永久 BUSY。正常传输远达不到此超时。
+#define LC_I2C_HAL_CALL_MIN_MS      5U
+#if LC_BUS_REPLY_TIMEOUT_MS * 1000U < LC_BUS_BUDGET_US + LC_I2C_HAL_CALL_MAX_MS * 1000U + 5000U
+#error "LC_BUS_REPLY_TIMEOUT_MS must cover the I2C2 bus budget plus one HAL call and margin."
+#endif
 #define LC_STARTUP_PRESSURE_SAMPLES 100U
 #define LC_STARTUP_PRESSURE_SETTLE_MS 1000U
 #define LC_STARTUP_PRESSURE_SPREAD_PA 200.0f // TODO：实测静止噪声后调整；约 2 cm 水头。
+// 源程序的 legacy 接口继续返回原有数值；物理压力接口直接复用旧工程
+// CompensateMs5837() 的 Pa 结果，避免在驱动层重复解释 D1/D2 或改变单位。
 // 与原始工程保持一致：原工程的 MX_IWDG_Init() 和 watchdog 设备均未加入运行路径。
 // 当前先关闭 IWDG，避免旧复位标志或一次总线超时把调试板锁在恢复循环中。
 // 重新做水下安全测试前，再单独评估并启用看门狗及独立动力急停。
