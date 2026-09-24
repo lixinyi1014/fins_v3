@@ -202,9 +202,10 @@ bool DispatchReceivedCommands(bool &arm_requested, uint32_t &arm_epoch)
                 (unsigned long)fd.gyro_gaps, (unsigned long)fd.numerical_failures);
             send();
             n = snprintf(line, sizeof(line),
-                "EDIAG5=PU=%lu,PR=%lu,PCR=%lu,CFGR=%lu,LATE=%lu,DUP=%lu,OVF=%lu,PDROP=%lu\r\n",
+                "EDIAG5=PU=%lu,PR=%lu,PCR=%lu,RESEED=%lu,CFGR=%lu,LATE=%lu,DUP=%lu,OVF=%lu,PDROP=%lu\r\n",
                 (unsigned long)fd.pressure_updates, (unsigned long)fd.pressure_rejected,
-                (unsigned long)fd.pressure_channel_rejected, (unsigned long)fd.configuration_rejections,
+                (unsigned long)fd.pressure_channel_rejected, (unsigned long)fd.pressure_channel_reseeds,
+                (unsigned long)fd.configuration_rejections,
                 (unsigned long)fd.late_observations, (unsigned long)fd.duplicate_observations,
                 (unsigned long)fd.event_overflows, (unsigned long)controller_task_diagnostics.pressure_sample_drops);
             send();
@@ -223,6 +224,25 @@ bool DispatchReceivedCommands(bool &arm_requested, uint32_t &arm_epoch)
                 (unsigned long)PressureSensor::pressure_sensor.BusFrameDrops(),
                 (unsigned long)LcBus_LastError(&hi2c2), (unsigned long)LcBus_LastError(&hi2c3));
             send();
+            // 拆成两行：这些计数恰恰因为出故障才会变大，挤在一行会在最需要
+            // 它的时候超过 LC_UART_TX_PACKET_SIZE 而被整行丢弃。
+            n = snprintf(line, sizeof(line),
+                "EDIAG8=P_RANGE=%lu,P_SKEW=%lu,P_JUMP=%lu,P_EMPTY=%lu,P_NIS=%lu,P_LAST=%lu\r\n",
+                (unsigned long)fd.pressure_reject_range, (unsigned long)fd.pressure_reject_skew,
+                (unsigned long)fd.pressure_reject_jump, (unsigned long)fd.pressure_reject_empty,
+                (unsigned long)fd.pressure_reject_nis, (unsigned long)fd.last_pressure_reject_bits);
+            send();
+            n = snprintf(line, sizeof(line),
+                "EDIAG9=NRL=%lu,NR_CNT=%lu/%lu/%lu/%lu/%lu/%lu/%lu\r\n",
+                (unsigned long)controller_task_diagnostics.stop_not_ready_mask,
+                (unsigned long)controller_task_diagnostics.not_ready_counts[0],
+                (unsigned long)controller_task_diagnostics.not_ready_counts[1],
+                (unsigned long)controller_task_diagnostics.not_ready_counts[2],
+                (unsigned long)controller_task_diagnostics.not_ready_counts[3],
+                (unsigned long)controller_task_diagnostics.not_ready_counts[4],
+                (unsigned long)controller_task_diagnostics.not_ready_counts[5],
+                (unsigned long)controller_task_diagnostics.not_ready_counts[6]);
+            send();
             timing_diagnostics.pressure_submit_max = timing_diagnostics.imu_wait_max = 0;
             timing_diagnostics.output_submit_max = timing_diagnostics.cycle_max = 0;
             timing_diagnostics.bus_pressure_max = timing_diagnostics.bus_output_max = 0;
@@ -235,14 +255,26 @@ bool DispatchReceivedCommands(bool &arm_requested, uint32_t &arm_epoch)
                                                        thrusters->BuildFusedControlRequest().yaw_enabled);
             char status[LC_UART_TX_PACKET_SIZE];
             const int length = snprintf(status, sizeof(status),
-                "STAT=ESKF,STOP=%u,READY=%u,CAL=%u,FLAGS=%lu,MASK=%u,FAULT=%u,WHY=%lu,CAL_CH=%lu,CAL_N=%lu\r\n",
+                "STAT=ESKF,STOP=%u,READY=%u,CAL=%u,FLAGS=%lu,MASK=%u,FAULT=%u,WHY=%lu,CAL_CH=%lu,CAL_N=%lu,"
+                "CAL_ST=%lu,CAL_PA=%ld,CAL_SPD=%ld,NRL=%lu\r\n",
                 unsigned(outputs_stopped != 0), unsigned(ready),
                 unsigned(PressureSensor::pressure_sensor.StartupCalibrationOk()),
                 static_cast<unsigned long>(thrusters->fused_feedback.flags),
                 unsigned(thrusters->fused_feedback.pressure_mask), unsigned(safety_fault_latched != 0),
                 static_cast<unsigned long>(controller_task_diagnostics.last_stop_reason),
                 static_cast<unsigned long>(PressureSensor::pressure_sensor.startup_calibration.failed_channel),
-                static_cast<unsigned long>(PressureSensor::pressure_sensor.startup_calibration.samples));
+                static_cast<unsigned long>(PressureSensor::pressure_sensor.startup_calibration.samples),
+                // CAL_PA：上电标定记下的“水面”绝对气压均值(Pa)，空气中应当接近 101325。
+                // 明显高出说明标定时传感器泡在水里，此后整条深度链路都带着这个偏差。
+                // CAL_SPD：四路零点的最大-最小(Pa)，空气中应当接近 0。
+                static_cast<unsigned long>(PressureSensor::pressure_sensor.startup_calibration.state),
+                long((PressureSensor::pressure_sensor.startup_calibration.surface_pa[0] +
+                      PressureSensor::pressure_sensor.startup_calibration.surface_pa[1] +
+                      PressureSensor::pressure_sensor.startup_calibration.surface_pa[2] +
+                      PressureSensor::pressure_sensor.startup_calibration.surface_pa[3]) * 0.25f),
+                long(PressureSensor::pressure_sensor.startup_calibration.channel_spread_pa),
+                // NRL：停机那一刻的 not_ready_mask，位义同 EDIAG1 的 NR。
+                static_cast<unsigned long>(controller_task_diagnostics.stop_not_ready_mask));
             if (length > 0 && unsigned(length) < sizeof(status))
                 LcSerial_Write(reinterpret_cast<const uint8_t *>(status), length);
             continue;
@@ -258,6 +290,14 @@ bool DispatchReceivedCommands(bool &arm_requested, uint32_t &arm_epoch)
         {
             bool accepted = thrusters->SetFusedTarget(packet.data + 5);
             ReplyMode(accepted, "target_or_mode");
+            continue;
+        }
+        if (PacketEquals(packet.data, "DEP:ON") || PacketEquals(packet.data, "DEP:OFF"))
+        {
+            // 深度闭环开关。关掉后垂直推进器只做姿态稳定，深浅由浮力配平决定。
+            thrusters->depth_hold_enabled = PacketEquals(packet.data, "DEP:ON");
+            const char *message = thrusters->depth_hold_enabled ? "DEP=ON\r\n" : "DEP=OFF\r\n";
+            LcSerial_Write(reinterpret_cast<const uint8_t *>(message), strlen(message));
             continue;
         }
 #endif
@@ -390,6 +430,15 @@ void ControlLoopTask(void *)
                 (pressure.ok ? 0U : 1U << 3) | (imu_timeout ? 1U << 4 : 0U) |
                 (!imu_ok && !imu_timeout ? 1U << 5 : 0U) |
                 (FusedStateUsable(feedback, now, thrusters->BuildFusedControlRequest().yaw_enabled) ? 0U : 1U << 6);
+            if (feedback_failed)
+            {
+                // 每一位各自累计；掩码每周期都会被覆盖，只有累计值事后还查得到。
+                for (unsigned bit = 0; bit < 7; ++bit)
+                    if (not_ready_mask & (1U << bit)) ++controller_task_diagnostics.not_ready_counts[bit];
+                // 停机那一刻的快照：与 last_stop_reason 同样只记第一次，
+                // 免得后续周期把真正的起因冲掉。
+                if (!outputs_stopped) controller_task_diagnostics.stop_not_ready_mask = not_ready_mask;
+            }
         }
 #else
         const bool ready = false; // 新固件要求 DRDY/ESKF，不允许落入旧控制路径。

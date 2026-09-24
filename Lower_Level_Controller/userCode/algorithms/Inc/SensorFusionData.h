@@ -86,6 +86,13 @@ struct FusionDiagnostics
     uint32_t accel_rejected, mag_rejected, pressure_rejected, pressure_channel_rejected;
     uint32_t late_observations, duplicate_observations, event_overflows, gyro_gaps;
     uint32_t numerical_failures, configuration_rejections;
+    uint32_t pressure_channel_reseeds; // 被拒通道放弃旧基准、拿当前读数重新起头的次数
+    // 深度失效的原因分项。此前只有笼统的 pressure_rejected /
+    // pressure_channel_rejected，分不出是量程、偏斜、跳变还是压差 NIS。
+    uint32_t pressure_reject_range, pressure_reject_skew, pressure_reject_jump;
+    uint32_t pressure_reject_empty, pressure_reject_nis;
+    // 最近一次通道被拒时的原因位：bit0 量程 bit1 偏斜 bit2 跳变
+    uint32_t last_pressure_reject_bits;
     float last_accel_nis, last_mag_nis, last_pressure_nis;
 };
 

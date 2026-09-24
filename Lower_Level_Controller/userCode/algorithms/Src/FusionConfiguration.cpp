@@ -1,4 +1,7 @@
 #include "FusionConfiguration.h"
+// 安装朝向开关 LC_IMU_BOARD_YAW_180 在这里；不引这个头的话 #if 会把未定义
+// 当成 0，宏看着设了却不起作用。
+#include "LowerControllerConfig.h"
 #include "FusionMath.h"
 
 namespace lower_controller
@@ -8,9 +11,17 @@ namespace
 FusionConfiguration BuildConfiguration()
 {
     FusionConfiguration c = {};
+    /* 安装朝向见 LC_IMU_BOARD_YAW_180。两种取法都是对角阵、det=+1：
+     *   0: diag(-1,+1,-1)  原约定
+     *   1: diag(+1,-1,-1)  绕板法线再转 180 度
+     * 两者只差 Rz(180)，即横滚/俯仰同时反号；z 对角元都是 -1，上下不变。 */
     for (unsigned i = 0; i < 3; ++i)
     {
+#if LC_IMU_BOARD_YAW_180
+        c.imu_to_body[i][i] = i == 1 ? -1.0f : (i == 0 ? 1.0f : -1.0f);
+#else
         c.imu_to_body[i][i] = i == 1 ? 1.0f : -1.0f;
+#endif
     }
     // RoboMaster official C-board INS_task.c: BMI -> board = Rz(-90 deg), IST -> board = I.
     // The decoders here retain sensor axes. Therefore IST -> BMI = Rz(+90 deg),

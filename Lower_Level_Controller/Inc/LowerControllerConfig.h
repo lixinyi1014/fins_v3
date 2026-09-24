@@ -47,6 +47,105 @@
 #define LC_STARTUP_PRESSURE_SAMPLES 100U
 #define LC_STARTUP_PRESSURE_SETTLE_MS 1000U
 #define LC_STARTUP_PRESSURE_SPREAD_PA 200.0f // TODO：实测静止噪声后调整；约 2 cm 水头。
+// 上电标定必须在空气中完成：空气里四路之间没有水柱差，读数应当彼此接近。
+// 1500 Pa 约 15 cm 水头，宽到容得下 MS5837 各片的出厂偏差，窄到能识破“在水里标零点”。
+#define LC_STARTUP_PRESSURE_CHANNEL_SPREAD_PA 1500.0f
+// FusedStateUsable 判定“反馈还在本级控制工作区内”的倾角上限（度）。0 = 不限制。
+// 原值硬编码 45°：超过就 READY 灭、控制环以 StopFeedback 停机，也就是潜器一旦
+// 倾过头，推进器恰好在最需要它扶正的时候被切掉，只能靠人捞。对一台会大角度
+// 机动的潜器，这个失效模式比“超出线性化工作区”本身更危险，所以默认关掉。
+// 关掉的代价：任何姿态下控制器都会继续驱动推进器，包括翻过来的时候；
+// 小倾角线性化在大角度下只是变钝，不会发散，但也谈不上还在设计工作区内。
+// 想恢复原行为改成 45.0f 即可，判据本身仍然在。
+#define LC_CONTROL_TILT_LIMIT_DEG 0.0f
+// 深度闭环开关的上电默认值。1=保持深度，0=只稳姿态、深度交给浮力配平。
+// 运行期可用 DEP:ON / DEP:OFF 切换。
+#define LC_DEPTH_HOLD_DEFAULT 1
+
+/* ---- 姿态整定（现场调这三组就够） ------------------------------------
+ * 姿态角度外环比例增益，单位 (rad/s)/rad。
+ *
+ * 原代码把旧 PID 增益换算到弧度制时用了 units_per_m = rho*g/2000 = 4.905，
+ * 但 legacy 压力单位是 hPa，1 m 水 = 98.1 hPa，正确系数是 rho*g/100。
+ * 用实测数据核对过三次（ESKF 深度 vs 四路均值 95.9；IMU 俯仰 vs 前后压差
+ * 107.8；IMU 横滚 vs 左右压差 119），都在 96~119，不可能是 4.905。
+ * 结果是姿态外环增益小了 20 倍：20 度俯仰偏差只输出 11.9 us，而死区补偿
+ * 本身就要 50~60 us，浮力配平预置用 90~100 us —— 等于没有权限。
+ *
+ * 旧增益按正确标度换算过来的等效值：横滚 0.5*0.2764m*98.1 = 13.6，
+ * 俯仰 1.0*0.4988m*98.1 = 48.9。这只是参照，不是上限。
+ *
+ * 结构上限：角度外环输出限幅 10 rad/s，速率内环 LC_ATTITUDE_RATE_KP = 8
+ * us/(rad/s)，相乘得**单通道最大权限 80 us，kp 再大也突破不了**。
+ * 未饱和时出力 = 8 * kp * 偏差(rad) = 0.1396 * kp us/度，
+ * 所以 kp 实际决定的是"多大偏差达到满权限"：
+ *     kp=12 -> 47.7 度    kp=24 -> 23.9 度
+ *     kp=36 -> 15.9 度    kp=48.9 -> 11.7 度（接近开关式控制）
+ *
+ * 2026-09-23 实测确定 IMU 装反并修正之后，两个通道都取 36：
+ * 约 16 度就给满权限，横滚力臂只有俯仰的 55%（0.0691 vs 0.1247 m），
+ * 同样 80 us 产生的力矩更小，所以不按旧版那样让 roll 只有 pitch 的一半。
+ * 振荡就对半砍；若满权限仍然不够，kp 不是正确的旋钮，改 LC_ATTITUDE_RATE_KP。 */
+/* IMU 整板装机朝向。0 = 原约定，1 = 绕板法线再转 180 度。
+ *
+ * docs/FINAL_INTEGRATION_20260916.md 第 58 行：官方孔位存在两个相差 180 度的
+ * 正确旋转，四孔残差都小于 1e-5 mm，"孔位匹配不能唯一决定插座朝前还是朝后"。
+ * 当时按旧约定取了其中一个，并留了 TODO(IMU_INSTALLATION)。
+ *
+ * 这两个朝向相差一个绕法线的 180 度，效果是**横滚和俯仰同时反号**，
+ * 而竖直方向（z 轴对角元两种取法都是 -1）不受影响 ——
+ * 也就是说改这个开关不会动"哪边是下"，只会动前后和左右。
+ *
+ * 判定办法（空气中，不解锁，压力阵列不参与）：把机头抬起约 30 度看 HUD 俯仰，
+ * FRD 约定下抬头应当是正值；读到负值就把这里改成 1。 */
+#ifndef LC_IMU_BOARD_YAW_180
+#define LC_IMU_BOARD_YAW_180 1   // 2026-09-23 实测确定：空气中抬头/右舷下都读负，原约定反了
+#endif
+
+#ifndef LC_ROLL_ANGLE_KP
+#define LC_ROLL_ANGLE_KP 36.0f
+#endif
+#ifndef LC_PITCH_ANGLE_KP
+#define LC_PITCH_ANGLE_KP 48.0f
+#endif
+/* 姿态速率内环比例增益，单位 us/(rad/s)，横滚与俯仰分开。
+ * 它和角度外环的输出限幅（10 rad/s）共同决定该通道的最大权限：
+ *     最大权限 = 本增益 * 10 us
+ * 旧版两轴都是 8 -> 80 us。**已经打满还扶不动时该加的是这个数，不是 kp**：
+ * 饱和之后 kp 再大也一点力都多不出来，只会让它更早进饱和。
+ *
+ * 2026-09-23：横滚在 kp=36 / 速率 8 下表现良好，不动；俯仰因为机体头重脚轻
+ * 有一股常驻低头力矩，长期顶在 80 us 上，所以单独放到 12 -> 120 us。
+ * 上限受推进器 1000..2000 us 与死区补偿约束。 */
+#ifndef LC_ROLL_RATE_KP
+#define LC_ROLL_RATE_KP 8.0f
+#endif
+#ifndef LC_PITCH_RATE_KP
+#define LC_PITCH_RATE_KP 12.0f
+#endif
+
+/* 偏航闭环增益。偏航反馈本来就是弧度，不涉及 units_per_m 那个换算问题，
+ * 但原值极弱：kp=2、速率 kp=5，每度只有 0.175 us，90 度偏差也才 15.7 us，
+ * 而手动转向的开环预置就是 40 us —— 等于拉不住平移带来的偏航。
+ * 现值：每度 2.79 us，满权限 160 us，约 57 度进饱和。
+ * 注意 ACL 打开后 FusedStateUsable 会把"航向已观测"列为必需项。 */
+#ifndef LC_YAW_ANGLE_KP
+#define LC_YAW_ANGLE_KP 20.0f
+#endif
+#ifndef LC_YAW_RATE_KP
+#define LC_YAW_RATE_KP 8.0f
+#endif
+
+/* 姿态配平前馈，单位 us（推进器脉宽当量），直接叠加在对应通道的控制量上。
+ * 符号按分配矩阵注释：正俯仰 = 前上后下，正横滚 = 左上右下。
+ * 机体头重脚轻（低头）时给 LC_PITCH_TRIM_US 正值抬头。
+ * 0 = 不配平。整定办法见下：从 0 开始每次加 10，直到松手能大致保持水平。 */
+#ifndef LC_PITCH_TRIM_US
+#define LC_PITCH_TRIM_US 60.0f
+#endif
+#ifndef LC_ROLL_TRIM_US
+#define LC_ROLL_TRIM_US 0.0f
+#endif
 // 源程序的 legacy 接口继续返回原有数值；物理压力接口直接复用旧工程
 // CompensateMs5837() 的 Pa 结果，避免在驱动层重复解释 D1/D2 或改变单位。
 // 与原始工程保持一致：原工程的 MX_IWDG_Init() 和 watchdog 设备均未加入运行路径。

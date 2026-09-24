@@ -129,9 +129,12 @@ public:
     bool StartupCalibrationOk() const { return startup_calibration_ok_; }
     struct StartupCalibrationDiagnostics
     {
-        uint32_t state, samples; // 0=未执行/恢复锁定，1=采集中，2=成功，3=失败
+        // 0=未执行/恢复锁定，1=采集中，2=成功，3=失败，
+        // 4=四路零点互相差太多（多半没在空气中标定，见 CalibrateAtStartup）
+        uint32_t state, samples;
         uint32_t failed_channel; // 0..3；4 表示全局条件不满足
         float surface_pa[4], spread_pa[4];
+        float channel_spread_pa;  // 四路零点的最大-最小，Pa；空气中应当接近 0
     } startup_calibration = {};
 
 private:

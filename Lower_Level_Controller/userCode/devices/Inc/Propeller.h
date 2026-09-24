@@ -135,6 +135,8 @@ public:
     lower_controller::FusionState fused_feedback = {};
     lower_controller::FusedControlRequest BuildFusedControlRequest() const;
     bool SetFusedTarget(const char *command);
+    // 深度闭环开关，DEP:ON / DEP:OFF 切换；关掉时垂直推进器只稳姿态。
+    bool depth_hold_enabled = LC_DEPTH_HOLD_DEFAULT != 0;
 #endif
 
     // Snapshot -> controller/mixer -> output driver. ComputeControl performs no I/O.

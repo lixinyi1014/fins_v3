@@ -1,0 +1,28 @@
+{
+  "buttons": {
+    "ascend": 0,
+    "descend": 1,
+    "yaw_ccw": 2,
+    "yaw_cw": 3,
+    "yaw_hold_toggle": 4,
+    "fine_modifier": 5,
+    "estop": 6,
+    "arm_toggle": 7,
+    "servo_left_center": 8,
+    "servo_right_center": 9
+  },
+  "axes": {
+    "left_horizontal": 0,
+    "left_vertical": 1,
+    "right_horizontal": 2,
+    "right_vertical": 3
+  },
+  "hat": 0,
+  "deadzone": 0.25,
+  "invert": {
+    "left_horizontal": false,
+    "left_vertical": true,
+    "right_horizontal": false,
+    "right_vertical": true
+  }
+}

@@ -6,6 +6,9 @@
 namespace lower_controller
 {
 using namespace fusion_math;
+// 反馈倾角上限，0 表示不限制。见 LC_CONTROL_TILT_LIMIT_DEG 的说明。
+static constexpr float kTiltLimitRad = LC_CONTROL_TILT_LIMIT_DEG * 3.14159265f / 180.0f;
+static constexpr bool kTiltLimited = LC_CONTROL_TILT_LIMIT_DEG > 0.0f;
 namespace
 {
 FusedControlConfiguration BuildControllerConfiguration()
@@ -13,24 +16,20 @@ FusedControlConfiguration BuildControllerConfiguration()
     FusedControlConfiguration c = {};
     c.gains_configured = true; // 已选用原版转换初值，仍需实机整定。
     c.allocation_configured = true;
-    c.position_xy_enabled = false; // 下位机没有 x/y 感知；位置环结构已就绪，等上位机接入。
-    c.quadratic_thrust = false;    // 保持原工程的线性 PWM 当量映射。
     // TODO(TUNING)：以下是待台架验证的初值，不是已完成实机整定。
     // 旧 PID: Ki 每次累加、Kd 每次差分；新 PID: Ki/s、Kd*s。
     // 因此 Ki_new=Ki_old*f，Kd_new=Kd_old/f。速率环比例项可直接沿用。
-    c.rate[0] = {8, 0, 0, 50, 200};                 // RollInPID
-    c.rate[1] = {8, 0, 0, 50, 200};                 // PitchInPID
-    c.rate[2] = {5, 0, 0, 100, 400};                // YawInPID
-    c.angle[2] = {2, 0.01f * 50, 2.0f / 50, 5, 20}; // YawOutPID，rad -> rad/s。
+    // 速率内环比例项决定单通道最大权限（见 LC_ATTITUDE_RATE_KP）。
+    c.rate[0] = {LC_ROLL_RATE_KP, 0, 0, 50, 200}; // RollInPID
+    c.rate[1] = {LC_PITCH_RATE_KP, 0, 0, 50, 200}; // PitchInPID
+    c.rate[2] = {LC_YAW_RATE_KP, 0, 0, 100, 400}; // YawInPID
+    c.angle[2] = {LC_YAW_ANGLE_KP, 0.01f*50, 2.0f/50, 5, 20}; // YawOutPID，rad -> rad/s。
     // 这里的 units_per_m 只服务于保留的旧控制增益换算；新 ESKF 已在 pressure_pa
     // 接口上使用绝对压力和液面参考，不能把旧控制标度当成传感器单位。
     const auto &physical = GetFusionConfiguration();
-    const float units_per_m = physical.water_density_kg_m3 * physical.gravity_m_s2 / 2000.0f;
-    // 论文 6.2 的三个位置单环；z 通道沿用原深度 PID 增益，x/y 暂用同量级初值。
-    // TODO(TUNING)：x/y 增益在上位机位置反馈接入并确定坐标系后重新整定。
-    c.translation[0] = {10 * units_per_m, 0, 0, 50, 200};
-    c.translation[1] = {10 * units_per_m, 0, 0, 50, 200};
-    c.translation[2] = {10 * units_per_m, 0.02f * 150 * units_per_m, 10.0f / 150 * units_per_m, 50, 200};
+    const float units_per_m = physical.water_density_kg_m3*physical.gravity_m_s2/2000.0f;
+    c.depth = {10*units_per_m, 0.02f*150*units_per_m,
+               10.0f/150*units_per_m, 50, 200};
     // 用同一份 CAD 几何计算压差/rad 的幅值，避免位置变了而增益仍用旧跨度。
     float roll_span = 0, pitch_span = 0;
     for (unsigned i = 0; i < 4; ++i)
@@ -38,41 +37,29 @@ FusedControlConfiguration BuildControllerConfiguration()
         roll_span += fabsf(physical.pressure_position_m[i][1]);
         pitch_span += fabsf(physical.pressure_position_m[i][0]);
     }
-    const float roll_scale = roll_span * units_per_m, pitch_scale = pitch_span * units_per_m;
-    c.angle[0] = {0.5f * roll_scale, 0.002f * 50 * roll_scale, roll_scale / 50, 2.5f, 10};
-    c.angle[1] = {pitch_scale, 0.005f * 50 * pitch_scale, pitch_scale / 50, 2.5f, 10};
-    // 论文 3.2/3.4 的推进器作用点与带符号正推力方向，单位 m，机体 FRD 系。
-    // 数值取自 docs/CAD_GEOMETRY_20260916.json，顺序为 PCA 通道 0..7：
-    // 0 前左水平, 1 前左垂直, 2 后左垂直, 3 后左水平, 4 后右水平, 5 后右垂直, 6 前右垂直, 7 前右水平。
-    // 垂直四推正方向取 +Zb（向下为正），与旧混控"正深度指令下沉"一致；
-    // 水平四推沿用 CAD 轴向，四推同向正命令产生 -Xb（后退），与旧 FrontPWM 符号一致。
-    const float position[LC_THRUSTER_COUNT][3] = {
-        {0.166452f, -0.120016f, 0.002f}, {0.054f, -0.107008f, -0.015f},
-        {-0.054f, -0.107008f, -0.015f},  {-0.142410f, -0.144057f, 0.002f},
-        {-0.142410f, 0.144057f, 0.002f}, {-0.054f, 0.107008f, -0.015f},
-        {0.054f, 0.107008f, -0.015f},    {0.166452f, 0.120016f, 0.002f}};
-    const float axis[LC_THRUSTER_COUNT][3] = {
-        {-0.7071068f, -0.7071068f, 0.0f}, {0.0f, 0.0f, 1.0f},
-        {0.0f, 0.0f, 1.0f},               {-0.7071068f, 0.7071068f, 0.0f},
-        {-0.7071068f, -0.7071068f, 0.0f}, {0.0f, 0.0f, 1.0f},
-        {0.0f, 0.0f, 1.0f},               {-0.7071068f, 0.7071068f, 0.0f}};
-    const int signs[LC_THRUSTER_COUNT] = LC_THRUSTER_SIGNS_INIT;
-    for (unsigned i = 0; i < LC_THRUSTER_COUNT; ++i)
+    const float roll_scale = roll_span*units_per_m, pitch_scale = pitch_span*units_per_m;
+    // 比例项改用显式可调值：原来的 *_scale 依赖 units_per_m，而那个系数比
+    // legacy 实际标度小 20 倍（见 LC_ROLL_ANGLE_KP 的说明）。积分/微分项
+    // 暂时沿用原换算，先把权限不足这一条解决，避免一次动太多项。
+    c.angle[0] = {LC_ROLL_ANGLE_KP, 0.002f*50*roll_scale, roll_scale/50, 2.5f, 10};
+    c.angle[1] = {LC_PITCH_ANGLE_KP, 0.005f*50*pitch_scale, pitch_scale/50, 2.5f, 10};
+    const int vertical[4] = LC_VERTICAL_CHANNELS_INIT;
+    const int horizontal[4] = LC_HORIZONTAL_CHANNELS_INIT;
+    const int signs[8] = LC_THRUSTER_SIGNS_INIT;
+    const int factors[4][3] = {{-1,-1,-1},{-1,-1,1},{-1,1,-1},{-1,1,1}};
+    for (unsigned i = 0; i < 4; ++i)
     {
-        memcpy(c.thrusters.position_m[i], position[i], sizeof(position[i]));
-        memcpy(c.thrusters.axis[i], axis[i], sizeof(axis[i]));
-        // k_T 未做系泊推力标定：取 1，推力单位即"PWM 增量当量"，与旧固定混控同标度。
-        c.thrusters.thrust_coefficient[i] = 1.0f;
-        // 正反桨成对布置，轴向反扭矩按抵消处理；标定后可填入 k_Q*sigma_i。
-        c.thrusters.torque_coefficient[i] = 0.0f;
-        c.thrusters.electrical_sign[i] = float(signs[i]);
-        c.allocation_weight[i] = 1.0f; // 论文 3.5 的 W；等权即最小二范数分配。
+        const int channel = vertical[i], sign = signs[channel];
+        c.allocation[channel][0] = -sign*factors[i][0];
+        c.allocation[channel][1] = sign*factors[i][1];
+        c.allocation[channel][2] = sign*factors[i][2];
+        c.allocation[horizontal[i]][3] = (i < 2 ? -1 : 1)*signs[horizontal[i]];
     }
-    c.thrusters.configured = true;
-    // 论文 2 的恢复力参数：质量、浮心、配重均未实测，默认关闭前馈。
-    // 实测后填写 weight_n、buoyancy_n、重心/浮心位置和 newton_per_unit 并置 configured=true；
-    // 启用时应同时把 Propeller 的 FloatPWM 预置改回中位，避免与前馈重复补偿。
-    c.restoring = {};
+    // 新 FRD 定义：向下力 Fz 为正，Mx=y*Fz，My=-x*Fz；因此正 pitch 对应前上后下。
+    // 沿用旧正反桨、通道和向下脉宽符号；roll/pitch 列按这个物理定义生成。
+    // STEP水平轴+旧W前进约定：正FRD偏航需左侧减、右侧加sign*PWM。
+    // 旧偏航反馈符号不同，不能照抄其分配列；已用CAD叉乘验证四轴恢复力矩。
+    // TODO(TUNING)：转换初值不是实机整定；首次低输出验证逐轴恢复方向。
     return c;
 }
 bool GainsValid(const SiPidGains &g)
@@ -80,22 +67,6 @@ bool GainsValid(const SiPidGains &g)
     return isfinite(g.kp) && isfinite(g.ki) && isfinite(g.kd) && isfinite(g.integral_limit) &&
            isfinite(g.output_limit) && g.kp > 0 && g.ki >= 0 && g.kd >= 0 && g.integral_limit >= 0 &&
            g.output_limit > 0;
-}
-/** @brief 论文 3.2：由几何构造 6x8 分配矩阵 B_T，行序 X Y Z K M N。 */
-void BuildAllocationMatrix(const ThrusterGeometry &t, float b[6][LC_THRUSTER_COUNT])
-{
-    for (unsigned i = 0; i < LC_THRUSTER_COUNT; ++i)
-    {
-        const float k = t.thrust_coefficient[i];
-        const float *a = t.axis[i], *r = t.position_m[i];
-        b[0][i] = k * a[0];
-        b[1][i] = k * a[1];
-        b[2][i] = k * a[2];
-        // k_T*(r x a) + k_Q*sigma*a：力臂力矩加轴向反扭矩。
-        b[3][i] = k * (r[1] * a[2] - r[2] * a[1]) + t.torque_coefficient[i] * a[0];
-        b[4][i] = k * (r[2] * a[0] - r[0] * a[2]) + t.torque_coefficient[i] * a[1];
-        b[5][i] = k * (r[0] * a[1] - r[1] * a[0]) + t.torque_coefficient[i] * a[2];
-    }
 }
 } // namespace
 const FusedControlConfiguration &GetFusedControlConfiguration()
@@ -105,32 +76,22 @@ const FusedControlConfiguration &GetFusedControlConfiguration()
 }
 bool FusedControlConfigurationReady(const FusedControlConfiguration &c)
 {
-    if (!c.gains_configured || !c.allocation_configured || !c.thrusters.configured)
+    if (!c.gains_configured || !c.allocation_configured || !GainsValid(c.depth))
         return false;
     for (unsigned j = 0; j < 3; ++j)
-        if (!GainsValid(c.translation[j]) || !GainsValid(c.angle[j]) || !GainsValid(c.rate[j]))
+        if (!GainsValid(c.angle[j]) || !GainsValid(c.rate[j]))
             return false;
-    for (unsigned i = 0; i < LC_THRUSTER_COUNT; ++i)
+    // 四个控制方向必须线性独立；仅检查“非零”无法发现深度/俯仰被配成相同方向。
+    float gram[16] = {}, factor[16];
+    for (unsigned i = 0; i < 8; ++i)
     {
-        if (!Finite(c.thrusters.position_m[i], 3) || !Finite(c.thrusters.axis[i], 3))
+        if (!Finite(c.allocation[i], 4))
             return false;
-        if (fabsf(Norm(c.thrusters.axis[i]) - 1.0f) > 1e-3f) // 推力方向必须是单位向量
-            return false;
-        if (!isfinite(c.thrusters.thrust_coefficient[i]) || c.thrusters.thrust_coefficient[i] <= 0)
-            return false;
-        if (!isfinite(c.allocation_weight[i]) || c.allocation_weight[i] <= 0)
-            return false;
-        if (c.thrusters.electrical_sign[i] != 1.0f && c.thrusters.electrical_sign[i] != -1.0f)
-            return false;
+        for (unsigned a = 0; a < 4; ++a)
+            for (unsigned b = 0; b < 4; ++b)
+                gram[a * 4 + b] += c.allocation[i][a] * c.allocation[i][b];
     }
-    // 论文 3.5：八推在六维上必须满行秩，否则存在无法产生的广义力方向。
-    float b[6][LC_THRUSTER_COUNT], gram[36] = {}, factor[36];
-    BuildAllocationMatrix(c.thrusters, b);
-    for (unsigned a = 0; a < 6; ++a)
-        for (unsigned d = 0; d < 6; ++d)
-            for (unsigned i = 0; i < LC_THRUSTER_COUNT; ++i)
-                gram[a * 6 + d] += b[a][i] * b[d][i] / c.allocation_weight[i];
-    return Cholesky(gram, factor, 6);
+    return Cholesky(gram, factor, 4);
 }
 bool FusedStateUsable(const FusionState &s, uint32_t now, bool heading)
 {
@@ -139,98 +100,20 @@ bool FusedStateUsable(const FusionState &s, uint32_t now, bool heading)
     return (s.flags & required) == required && (!heading || (s.flags & FusionHeadingObserved)) &&
            now - s.gyro_sample_us <= 20000U && now - s.pressure_sample_us <= 50000U &&
            now - s.published_us <= 20000U && Finite(s.euler_rad, 3) && Finite(s.body_rate_rad_s, 3) &&
-           isfinite(s.depth_m) && fabsf(s.euler_rad[0]) <= 0.7853982f &&
-           fabsf(s.euler_rad[1]) <= 0.7853982f; // 45°，超出本级小倾角控制工作区。
-}
-/** @brief 论文 3.5：一次算出加权伪逆 B_T^+ = W^-1 B^T (B W^-1 B^T)^-1 及通道标定增益。
- * 几何是常量，因此只在构造时计算；运行期分配退化为一次 8x6 乘法。 */
-void FusedController::BuildAllocation()
-{
-    memset(pseudo_inverse_, 0, sizeof(pseudo_inverse_));
-    memset(channel_gain_, 0, sizeof(channel_gain_));
-    allocation_ready_ = false;
-    if (!FusedControlConfigurationReady(configuration_))
-        return;
-    float b[6][LC_THRUSTER_COUNT], gram[36] = {}, factor[36];
-    BuildAllocationMatrix(configuration_.thrusters, b);
-    for (unsigned a = 0; a < 6; ++a)
-        for (unsigned d = 0; d < 6; ++d)
-            for (unsigned i = 0; i < LC_THRUSTER_COUNT; ++i)
-                gram[a * 6 + d] += b[a][i] * b[d][i] / configuration_.allocation_weight[i];
-    if (!Cholesky(gram, factor, 6))
-        return;
-    // 逐列解 (B W^-1 B^T) y = e_j 得到逆矩阵第 j 列，再左乘 W^-1 B^T。
-    for (unsigned j = 0; j < 6; ++j)
-    {
-        float unit[6] = {}, y[6];
-        unit[j] = 1.0f;
-        SolveCholesky(factor, unit, y, 6);
-        for (unsigned i = 0; i < LC_THRUSTER_COUNT; ++i)
-        {
-            float value = 0;
-            for (unsigned a = 0; a < 6; ++a)
-                value += b[a][i] * y[a];
-            pseudo_inverse_[i][j] = value / configuration_.allocation_weight[i];
-        }
-    }
-    if (!Finite(&pseudo_inverse_[0][0], LC_THRUSTER_COUNT * 6))
-        return;
-    // 论文 6.4/6.5 的 kappa：把虚拟控制量标定成"单位指令对应单个推进器满幅指令"，
-    // 使原来以 PWM 增量整定的 PID 增益在新分配路径下保持同一物理含义。
-    // 当前几何下 kappa = [2.828, 2.828, 4.0, 0.428, 0.216, 0.810]，
-    // 深度/横滚/俯仰/偏航四列与旧固定混控逐推进器数值完全一致。
-    for (unsigned j = 0; j < 6; ++j)
-    {
-        float peak = 0;
-        for (unsigned i = 0; i < LC_THRUSTER_COUNT; ++i)
-            peak = fmaxf(peak, fabsf(pseudo_inverse_[i][j]));
-        if (!(peak > 1e-6f))
-            return; // 该通道无法由八推产生
-        channel_gain_[j] = 1.0f / peak;
-    }
-    allocation_ready_ = true;
-}
-/** @brief 论文 2：重力与浮力恢复力 g(eta)，输出已换算为推力指令单位。 */
-void FusedController::RestoringFeedforward(const FusionState &state, float tau[6]) const
-{
-    memset(tau, 0, sizeof(float) * 6);
-    const auto &p = configuration_.restoring;
-    if (!p.configured || !(p.newton_per_unit > 0) || !isfinite(p.weight_n) || !isfinite(p.buoyancy_n))
-        return;
-    float r[3][3];
-    QuaternionMatrix(state.quaternion_bn, r); // R_b^n：机体系到世界系
-    // 世界系 NED 中重力沿 +Z、浮力沿 -Z；用 R^T 转到机体系，即取 R 的第三行。
-    float gravity_b[3], buoyancy_b[3];
-    for (unsigned i = 0; i < 3; ++i)
-    {
-        gravity_b[i] = r[2][i] * p.weight_n;
-        buoyancy_b[i] = -r[2][i] * p.buoyancy_n;
-    }
-    const float *rg = p.center_of_gravity_m, *rb = p.center_of_buoyancy_m;
-    float force[3], moment[3];
-    for (unsigned i = 0; i < 3; ++i)
-        force[i] = gravity_b[i] + buoyancy_b[i];
-    moment[0] = rg[1] * gravity_b[2] - rg[2] * gravity_b[1] + rb[1] * buoyancy_b[2] - rb[2] * buoyancy_b[1];
-    moment[1] = rg[2] * gravity_b[0] - rg[0] * gravity_b[2] + rb[2] * buoyancy_b[0] - rb[0] * buoyancy_b[2];
-    moment[2] = rg[0] * gravity_b[1] - rg[1] * gravity_b[0] + rb[0] * buoyancy_b[1] - rb[1] * buoyancy_b[0];
-    // Fossen 约定 g(eta) 在方程左侧，推进器需提供 -(重力+浮力) 的广义力来配平。
-    for (unsigned i = 0; i < 3; ++i)
-    {
-        tau[i] = -force[i] / p.newton_per_unit;
-        tau[i + 3] = -moment[i] / p.newton_per_unit;
-    }
-    if (!Finite(tau, 6))
-        memset(tau, 0, sizeof(float) * 6);
+           isfinite(s.depth_m) &&
+           (!kTiltLimited || (fabsf(s.euler_rad[0]) <= kTiltLimitRad &&
+                              fabsf(s.euler_rad[1]) <= kTiltLimitRad));
+    // 倾角上限默认关闭：见 LC_CONTROL_TILT_LIMIT_DEG。倾过头不再导致停机。
 }
 void FusedController::Reset()
 {
-    memset(translation_, 0, sizeof(translation_));
+    memset(&depth_, 0, sizeof(depth_));
     memset(angle_, 0, sizeof(angle_));
     memset(rate_, 0, sizeof(rate_));
     memset(desired_rate_, 0, sizeof(desired_rate_));
     previous_us_ = phase_ = 0;
     outer_dt_ = 0;
-    started_ = saturated_ = previous_yaw_ = previous_position_ = false;
+    started_ = saturated_ = previous_yaw_ = false;
 }
 float FusedController::Step(const SiPidGains &g, PidMemory &m, float error, float dt, bool freeze)
 {
@@ -251,12 +134,12 @@ FusedControlResult FusedController::Compute(const FusionState &state, const Fuse
                                             uint32_t now)
 {
     FusedControlResult result = {};
-    for (unsigned i = 0; i < LC_THRUSTER_COUNT; ++i)
+    for (unsigned i = 0; i < 8; ++i)
         result.command.pulse_us[i] = LC_THRUSTER_NEUTRAL_US; // 1550 us。
-    if (!allocation_ready_ || !FusedStateUsable(state, now, request.yaw_enabled) ||
-        !isfinite(request.depth_m) || request.depth_m < 0 || request.depth_m > 100 ||
-        !Finite(request.euler_rad, 3) || fabsf(request.euler_rad[0]) > 0.523599f ||
-        fabsf(request.euler_rad[1]) > 0.523599f)
+    if (!FusedControlConfigurationReady(configuration_) ||
+        !FusedStateUsable(state, now, request.yaw_enabled) || !isfinite(request.depth_m) ||
+        request.depth_m < 0 || request.depth_m > 100 || !Finite(request.euler_rad, 3) ||
+        fabsf(request.euler_rad[0]) > 0.523599f || fabsf(request.euler_rad[1]) > 0.523599f)
     {
         Reset();
         return result;
@@ -285,7 +168,6 @@ FusedControlResult FusedController::Compute(const FusionState &state, const Fuse
         previous_yaw_ = request.yaw_enabled;
         phase_ = 0;
     }
-    // ---- 论文 6.3：姿态外环（50 Hz）给出期望欧拉角变化率，再经 T^-1 转为机体系角速度。
     if (phase_ == 0)
     {
         float euler_rate[3] = {};
@@ -304,72 +186,36 @@ FusedControlResult FusedController::Compute(const FusionState &state, const Fuse
         outer_dt_ = 0;
     }
     phase_ = (phase_ + 1U) % 3U; // 150 Hz / 3 = 名义 50 Hz 角度外环。
-    // ---- 论文 6.2：三个位置单环在世界系计算，再用 R^T 转到机体系执行。
-    // x/y 需要上位机下发位置反馈；没有新鲜反馈时这两路输出 0 并清积分。
-    const bool position_active =
-        configuration_.position_xy_enabled && request.position_valid &&
-        Finite(request.position_measured_n_m, 2) && Finite(request.position_target_n_m, 2);
-    if (position_active != previous_position_)
+    /* 深度闭环可关：关掉时垂直推进器只做姿态稳定，深浅交给浮力配平。
+     * 关的时候必须清掉积分，否则重新打开会带着一段陈旧的积分量突然发力。 */
+    if (request.depth_hold)
+        result.effort[0] = Step(configuration_.depth, depth_, request.depth_m - state.depth_m, dt, saturated_);
+    else
     {
-        translation_[0] = {};
-        translation_[1] = {};
-        previous_position_ = position_active;
+        depth_ = {};
+        result.effort[0] = 0;
     }
-    float world_effort[3] = {};
-    if (position_active)
-        for (unsigned i = 0; i < 2; ++i)
-            world_effort[i] =
-                Step(configuration_.translation[i], translation_[i],
-                     request.position_target_n_m[i] - request.position_measured_n_m[i], dt, saturated_);
-    world_effort[2] =
-        Step(configuration_.translation[2], translation_[2], request.depth_m - state.depth_m, dt, saturated_);
-    float rotation[3][3], body_effort[3];
-    QuaternionMatrix(state.quaternion_bn, rotation); // R_b^n
-    for (unsigned i = 0; i < 3; ++i)                 // u_t = (R_b^n)^T u_t^n
-        body_effort[i] = rotation[0][i] * world_effort[0] + rotation[1][i] * world_effort[1] +
-                         rotation[2][i] * world_effort[2];
-    // ---- 角速度内环（150 Hz）给出三个转动虚拟控制通道。
-    float angular_effort[3];
     for (unsigned i = 0; i < 3; ++i)
-        angular_effort[i] = i == 2 && !request.yaw_enabled
-                                ? 0
-                                : Step(configuration_.rate[i], rate_[i],
-                                       desired_rate_[i] - state.body_rate_rad_s[i], dt, saturated_);
-    for (unsigned i = 0; i < 3; ++i)
+        result.effort[i + 1] = i == 2 && !request.yaw_enabled
+                                   ? 0
+                                   : Step(configuration_.rate[i], rate_[i],
+                                          desired_rate_[i] - state.body_rate_rad_s[i], dt, saturated_);
+    /* 静态配平前馈：机体本身不平（配重偏心）时，闭环只能靠积分慢慢顶出来，
+     * 而积分限幅又把它卡住。直接给一个常量抵消这个恒定力矩，闭环就只需要
+     * 处理扰动。叠加在速率环之后，不参与积分，所以不会引起积分饱和。
+     * 符号见分配矩阵注释：正俯仰 = 前上后下。 */
+    result.effort[1] += LC_ROLL_TRIM_US;
+    result.effort[2] += LC_PITCH_TRIM_US;
+    for (unsigned i = 0; i < 8; ++i)
     {
-        result.effort[i] = body_effort[i];
-        result.effort[i + 3] = angular_effort[i];
-    }
-    // ---- 合成期望广义力：kappa 标定加恢复力前馈（未标定时为 0）。
-    float tau[6], feedforward[6];
-    RestoringFeedforward(state, feedforward);
-    for (unsigned j = 0; j < 6; ++j)
-        tau[j] = channel_gain_[j] * result.effort[j] + feedforward[j];
-    if (!Finite(tau, 6))
-    {
-        Reset();
-        FusedControlResult failed = {};
-        for (unsigned channel = 0; channel < LC_THRUSTER_COUNT; ++channel)
-            failed.command.pulse_us[channel] = LC_THRUSTER_NEUTRAL_US;
-        return failed;
-    }
-    // ---- 论文 3.5：加权伪逆分配 q = B_T^+ tau。
-    for (unsigned i = 0; i < LC_THRUSTER_COUNT; ++i)
-    {
-        float q = 0;
-        for (unsigned j = 0; j < 6; ++j)
-            q += pseudo_inverse_[i][j] * tau[j];
-        // 论文 3.2 的 q_i = n_i|n_i|：需要时反解转速指令，默认线性 PWM 当量。
-        float n = q;
-        if (configuration_.quadratic_thrust)
-            n = (q >= 0 ? 1.0f : -1.0f) * sqrtf(fabsf(q));
-        result.thrust[i] = q;
-        float pulse = float(request.base.pulse_us[i]) + configuration_.thrusters.electrical_sign[i] * n;
+        float pulse = float(request.base.pulse_us[i]);
+        for (unsigned j = 0; j < 4; ++j)
+            pulse += configuration_.allocation[i][j] * result.effort[j];
         if (!isfinite(pulse))
         {
             Reset();
             FusedControlResult failed = {};
-            for (unsigned channel = 0; channel < LC_THRUSTER_COUNT; ++channel)
+            for (unsigned channel = 0; channel < 8; ++channel)
                 failed.command.pulse_us[channel] = LC_THRUSTER_NEUTRAL_US;
             return failed;
         }

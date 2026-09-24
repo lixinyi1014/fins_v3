@@ -50,7 +50,8 @@ inline bool ParseIntegerList(const char *s, unsigned count, int lo, int hi, int3
 }
 inline bool ValidLegacyCommand(const char *s) {
     const char *const exact[]={"ON","OFF","CA","VA","BEG","END","IVA:BEG","IVA:END",
-        "DN","UP","W","S","A","D","Z","E","Q","RPY:ON","RPY:OFF","ACL:ON","ACL:OF","ACL:OFF"};
+        "DN","UP","W","S","A","D","Z","E","Q","RPY:ON","RPY:OFF","ACL:ON","ACL:OF","ACL:OFF",
+        "DEP:ON","DEP:OFF"};
     for (auto command:exact) if (!strcmp(s,command)) return true;
     if (!strncmp(s,"MOT:",4)) return ParseIntegerList(s+4,4,500,2500);
     if (!strncmp(s,"TES:",4)) return ParseIntegerList(s+4,8,1000,2000);

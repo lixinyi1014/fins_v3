@@ -6,6 +6,11 @@ namespace lower_controller
 {
 using namespace fusion_math;
 
+// 压力通道连续被拒多少帧之后，放弃冻住的旧基准、拿当前读数重新起头。
+// 压力阵列帧率 50 Hz，25 帧约 0.5 s。本层刻意只依赖 <stdint.h>，
+// 不引板级配置头，所以常量放在这里而不是 LowerControllerConfig.h。
+static constexpr uint8_t kPressureRejectReseedFrames = 25U;
+
 AttitudeEskf::AttitudeEskf(const FusionConfiguration &configuration) : configuration_(configuration)
 {
     configuration_valid_ = ValidateFusionConfiguration(configuration_);
@@ -23,6 +28,7 @@ void AttitudeEskf::Reset()
     for (unsigned i = 0; i < 6; ++i)
         covariance_[i][i] = i < 3 ? 0.1f * 0.1f : 0.03f * 0.03f;
     memset(pressure_previous_valid_, 0, sizeof(pressure_previous_valid_));
+    memset(pressure_reject_streak_, 0, sizeof(pressure_reject_streak_));
     depth_m_ = 0;
     memcpy(magnetic_reference_n_, configuration_.magnetic_reference_n, sizeof(magnetic_reference_n_));
     magnetic_reference_uT_ = configuration_.magnetic_reference_uT;
@@ -409,6 +415,7 @@ bool AttitudeEskf::ProcessPressure(const PressureArraySample &pressure)
     if (pressure.calibration_epoch != pressure_epoch_)
     {
         memset(pressure_previous_valid_, 0, sizeof(pressure_previous_valid_));
+        memset(pressure_reject_streak_, 0, sizeof(pressure_reject_streak_));
         pressure_epoch_ = pressure.calibration_epoch;
         depth_valid_ = false;
     }
@@ -422,18 +429,32 @@ bool AttitudeEskf::ProcessPressure(const PressureArraySample &pressure)
         const uint32_t t = pressure.channel_sample_us[i];
         depth[i] = (pressure.pressure_pa[i] - configuration_.surface_pressure_pa[i]) /
                    (configuration_.water_density_kg_m3 * configuration_.gravity_m_s2); // Pa/(kg/m³·m/s²)=m。
-        bool valid = isfinite(depth[i]) && depth[i] >= configuration_.pressure_min_m &&
-                     depth[i] <= configuration_.pressure_max_m &&
-                     pressure.stamp.sample_us - t <= configuration_.maximum_pressure_skew_us;
+        /* 三道门分开记，否则只知道"通道被拒"，查不出是量程、采样偏斜还是跳变。
+         * 现场表现完全不同：偏斜说明 I2C2 读一帧的时间被拉长（多半是推进器
+         * 一转就出现的总线干扰），跳变说明潜器动得比门限快，量程说明零点或
+         * 传感器本身有问题。 */
+        const bool range_ok = isfinite(depth[i]) && depth[i] >= configuration_.pressure_min_m &&
+                              depth[i] <= configuration_.pressure_max_m;
+        const bool skew_ok = pressure.stamp.sample_us - t <= configuration_.maximum_pressure_skew_us;
+        bool jump_ok = true;
         if (pressure_previous_valid_[i])
         {
             const int32_t elapsed = static_cast<int32_t>(t - pressure_previous_us_[i]);
             if (elapsed <= 0)
-                valid = false;
+                jump_ok = false;
             else if (fabsf(depth[i] - pressure_previous_m_[i]) >
                      configuration_.pressure_jump_margin_m +
                          configuration_.pressure_max_rate_m_s * float(elapsed > 50000 ? 50000 : elapsed) * 1e-6f)
-                valid = false;
+                jump_ok = false;
+        }
+        const bool valid = range_ok && skew_ok && jump_ok;
+        if (!valid)
+        {
+            if (!range_ok) ++diagnostics_.pressure_reject_range;
+            if (!skew_ok) ++diagnostics_.pressure_reject_skew;
+            if (!jump_ok) ++diagnostics_.pressure_reject_jump;
+            diagnostics_.last_pressure_reject_bits =
+                (range_ok ? 0U : 1U) | (skew_ok ? 0U : 2U) | (jump_ok ? 0U : 4U);
         }
         if (valid)
         {
@@ -441,12 +462,35 @@ bool AttitudeEskf::ProcessPressure(const PressureArraySample &pressure)
             pressure_mask_ |= uint8_t(1U << i);
         }
         else
+        {
             ++diagnostics_.pressure_channel_rejected;
+            /* 跳变门是限速率用的，但它比较的是"上一次被接受"的深度，而被拒通道
+             * 不会更新 pressure_previous_*，且 elapsed 被封顶在 50 ms。两者合起来，
+             * 允许偏差被永久钉死在 jump_margin + max_rate*0.05 ≈ 10 cm：通道只要
+             * 掉线期间潜器移动超过这个距离，就再也回不来，直到重新标定或断电。
+             * 实测就是这样丢光四路后 READY 灭掉且不自恢复。所以连续被拒够久之后
+             * 主动丢掉冻住的基准，让它拿当前读数重新起头 —— 绝对量程门、偏斜门和
+             * 相对几何 NIS 门仍然在，坏掉的传感器不会因此被无条件放行。 */
+            if (pressure_reject_streak_[i] < 255U)
+                ++pressure_reject_streak_[i];
+            if (pressure_previous_valid_[i] &&
+                pressure_reject_streak_[i] >= kPressureRejectReseedFrames)
+            {
+                pressure_previous_valid_[i] = false;
+                pressure_reject_streak_[i] = 0;
+                ++diagnostics_.pressure_channel_reseeds;
+            }
+        }
     }
     if (count == 0)
     {
-        depth_valid_ = false;
+        /* 不再清 depth_valid_。这里是"本帧没产出新深度"，不是"深度不可信"：
+         * last_pressure_us_ 只在成功时更新，而 FusedStateUsable 已经要求
+         * now - pressure_sample_us <= 50 ms，持续拒绝自然会因为过期而失效。
+         * 原来在这里额外清一个硬标志属于重复把关，代价是单帧野值就能立刻
+         * 锁停整机 —— 实测 395 次更新里拒 1 帧就停了。 */
         ++diagnostics_.pressure_rejected;
+        ++diagnostics_.pressure_reject_empty;
         return false;
     }
     bool submerged = true;
@@ -497,10 +541,19 @@ bool AttitudeEskf::ProcessPressure(const PressureArraySample &pressure)
         }
         else if (pressure_rank_)
         {
+            /* 压差姿态被 NIS 拒绝，只放弃姿态这一项，深度照算。
+             *
+             * 原来这里直接 return，等于让深度给压差姿态连坐。但两者是彼此独立的
+             * 观测：深度是四路的加权平均，压差是四路之间的差。水面附近浮着时，
+             * 波浪让压差和姿态预测差出几厘米是常态（实测 1062 帧拒了 93 帧，
+             * 8.8%），而四路的平均值一直是好的 —— 通道级三道门一次都没拒过。
+             * 连坐的结果就是连续拒三帧就超过 50 ms 新鲜度门，整机停机。
+             *
+             * 姿态本来就还有加速度计在修正，少一次压差更新不影响可用性；
+             * 而深度是垂直控制唯一的反馈，不该因为压差吵架就没有。 */
             ++diagnostics_.pressure_rejected;
-            pressure_rank_ = 0;
-            depth_valid_ = false;
-            return false;
+            ++diagnostics_.pressure_reject_nis;
+            pressure_rank_ = 0; // 本帧不提供姿态信息，也不刷新 last_tilt_correction_us_
         } // 相对几何 NIS 拒绝时，整帧也不用于新深度；不能姿态拒绝却继续吸收同一异常阵列。
     }
     // GLS depth: (1ᵀΣ⁻¹1)⁻¹1ᵀΣ⁻¹(z-R_s*gamma). 每路先减姿态引起的安装高度，再加权。
@@ -511,8 +564,7 @@ bool AttitudeEskf::ProcessPressure(const PressureArraySample &pressure)
     if (!Cholesky(sigma, l, count))
     {
         ++diagnostics_.numerical_failures;
-        depth_valid_ = false;
-        return false;
+        return false; // 本帧无产出；深度是否还可用交给新鲜度门判定
     }
     SolveCholesky(l, ones, weights, count);
     for (unsigned i = 0; i < count; ++i)
@@ -524,8 +576,8 @@ bool AttitudeEskf::ProcessPressure(const PressureArraySample &pressure)
     }
     if (!isfinite(value) || !isfinite(sum) || sum <= 0)
     {
-        depth_valid_ = false;
-        return false;
+        ++diagnostics_.numerical_failures;
+        return false; // 同上
     }
     // Commit trusted baselines only after the complete array/geometry/depth update succeeds.
     for (unsigned n = 0; n < count; ++n) {
@@ -533,6 +585,7 @@ bool AttitudeEskf::ProcessPressure(const PressureArraySample &pressure)
         pressure_previous_m_[i] = depth[i];
         pressure_previous_us_[i] = pressure.channel_sample_us[i];
         pressure_previous_valid_[i] = true;
+        pressure_reject_streak_[i] = 0;
     }
     depth_m_ = value / sum;
     depth_valid_ = true;

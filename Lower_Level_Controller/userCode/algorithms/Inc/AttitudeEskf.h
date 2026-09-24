@@ -53,6 +53,7 @@ class AttitudeEskf
     float pressure_previous_m_[4];
     uint32_t pressure_previous_us_[4];
     bool pressure_previous_valid_[4];
+    uint8_t pressure_reject_streak_[4]; // 连续被拒帧数；到阈值就丢掉冻住的旧基准
     float depth_m_;
     float magnetic_reference_n_[3], magnetic_reference_uT_;
     bool magnetic_reference_ready_;

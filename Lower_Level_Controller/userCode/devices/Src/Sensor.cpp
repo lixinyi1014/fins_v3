@@ -100,7 +100,9 @@ bool PressureSensor::CalibrateAtStartup()
             startup_calibration.failed_channel = i;
             TCA_SetChannel(i);
             const float pressure = MS5837_30BA_GetData(i); // legacy mbar 量级
-            if (!LcBus_Ok(&hi2c2) || !isfinite(pressure) || pressure < 800.0f || pressure > 1200.0f)
+            // 850..1100 mbar：下限容得下高海拔，上限约相当于水下 0.9 m。
+            // 旧的 1200 上限相当于水下 1.9 m，在水里标零点照样通过。
+            if (!LcBus_Ok(&hi2c2) || !isfinite(pressure) || pressure < 850.0f || pressure > 1100.0f)
             {
                 startup_calibration.state = 3;
                 return false;
@@ -122,7 +124,33 @@ bool PressureSensor::CalibrateAtStartup()
     for (unsigned i = 0; i < SENSOR_NUM; ++i)
     {
         surface_pa[i] = float(sum[i] / double(LC_STARTUP_PRESSURE_SAMPLES) * 100.0);
+        // 先记录再判定：失败时也要能把实测到的零点报出来，否则无从判断差在哪。
         startup_calibration.surface_pa[i] = surface_pa[i];
+    }
+
+    /* 四路之间的一致性：空气里没有水柱，四片传感器读数应当彼此接近；
+     * 泡在水里标定时，各片按自身安装高度差开。之前只校验"同一路 100 次采样
+     * 之间"的离散度，于是在水中倾斜标零点照样判通过，之后整条深度链路
+     * 全部带着这个偏差，岸上平放会读出几十厘米的负深度。 */
+    float lowest = surface_pa[0], highest = surface_pa[0];
+    unsigned lowest_channel = 0, highest_channel = 0;
+    for (unsigned i = 1; i < SENSOR_NUM; ++i)
+    {
+        if (surface_pa[i] < lowest) { lowest = surface_pa[i]; lowest_channel = i; }
+        if (surface_pa[i] > highest) { highest = surface_pa[i]; highest_channel = i; }
+    }
+    startup_calibration.channel_spread_pa = highest - lowest;
+    if (startup_calibration.channel_spread_pa > LC_STARTUP_PRESSURE_CHANNEL_SPREAD_PA)
+    {
+        // 读数最高的那一路通常就是泡得最深的那一路，报出来便于现场判断姿态。
+        startup_calibration.failed_channel = highest_channel;
+        (void)lowest_channel;
+        startup_calibration.state = 4; // 4=四路互相差太多，多半没在空气中标定
+        return false;
+    }
+
+    for (unsigned i = 0; i < SENSOR_NUM; ++i)
+    {
         // Keep the known legacy display/control scale in sync with the same
         // air sample; the ESKF uses surface_pa[] below.
         data_pressure_offset[i] = surface_pa[i] / 100.0f;
